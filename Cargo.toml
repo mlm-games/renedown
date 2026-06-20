@@ -17,7 +17,7 @@ name = "renedown-desktop"
 path = "src/main.rs"
 
 [package.metadata.android]
-package = "com.example.renedown"
+package = "org.mlm.renedown"
 apk_name = "renedown"
 target_sdk_version = 34
 min_sdk_version = 26
@@ -32,6 +32,9 @@ fullscreen = false
 repose-core.workspace = true
 repose-ui.workspace = true
 repose-material.workspace = true
+repose-platform = { workspace = true }
+repose-render-wgpu.workspace = true
+
 pulldown-cmark = "0.13"
 
 winit = { workspace = true }
@@ -40,11 +43,7 @@ anyhow = { workspace = true }
 log = { workspace = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
-repose-platform = { workspace = true }
 android_logger = { workspace = true }
-
-[target.'cfg(all(not(target_os = "android"), not(target_arch = "wasm32")))'.dependencies]
-repose-platform = { workspace = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = { workspace = true }
@@ -52,8 +51,5 @@ wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true }
 console_error_panic_hook = { workspace = true }
 console_log = { workspace = true }
-log.workspace = true
 getrandom = { workspace = true, features = ["wasm_js"] }
 wgpu = { workspace = true, features = ["webgpu", "webgl"] }
-repose-platform = { workspace = true }
-repose-render-wgpu.workspace = true
