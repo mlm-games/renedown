@@ -1,6 +1,6 @@
 [package]
 name = "renedown"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 publish = false
 default-run = "renedown-desktop"
@@ -19,7 +19,7 @@ path = "src/main.rs"
 [package.metadata.android]
 package = "org.mlm.renedown"
 apk_name = "renedown"
-target_sdk_version = 34
+target_sdk_version = 37
 min_sdk_version = 26
 build_targets = ["aarch64-linux-android"]
 split_per_abi = true
