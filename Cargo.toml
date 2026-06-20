@@ -1,7 +1,7 @@
 [package]
 name = "renedown"
-version.workspace = true
-edition.workspace = true
+version = "0.1.0"
+edition = "2024"
 publish = false
 default-run = "renedown-desktop"
 
@@ -29,27 +29,27 @@ label = "Repose Markdown"
 fullscreen = false
 
 [dependencies]
-repose-core.workspace = true
-repose-ui.workspace = true
-repose-material.workspace = true
-repose-platform = { workspace = true }
-repose-render-wgpu.workspace = true
+repose-core = "0.17.7"
+repose-ui = "0.17.7"
+repose-material = "0.17.7"
+repose-platform = "0.17.7"
+repose-render-wgpu = "0.17.7"
 
 pulldown-cmark = "0.13"
 
-winit = { workspace = true }
-env_logger = { workspace = true }
-anyhow = { workspace = true }
-log = { workspace = true }
+winit = "0.30"
+env_logger = "0.11"
+anyhow = "1"
+log = "0.4"
 
 [target.'cfg(target_os = "android")'.dependencies]
-android_logger = { workspace = true }
+android_logger = "0.15"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = { workspace = true }
-wasm-bindgen-futures = { workspace = true }
-web-sys = { workspace = true }
-console_error_panic_hook = { workspace = true }
-console_log = { workspace = true }
-getrandom = { workspace = true, features = ["wasm_js"] }
-wgpu = { workspace = true, features = ["webgpu", "webgl"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3"
+console_error_panic_hook = "0.1"
+console_log = "1"
+getrandom = { version = "0.3", features = ["wasm_js"] }
+wgpu = { version = "29", features = ["webgpu", "webgl"] }
