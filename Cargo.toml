@@ -1,6 +1,6 @@
 [package]
 name = "renedown"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 publish = false
 default-run = "renedown-desktop"
@@ -29,11 +29,11 @@ label = "Repose Markdown"
 fullscreen = false
 
 [dependencies]
-repose-core = "0.17.7"
-repose-ui = "0.17.7"
-repose-material = "0.17.7"
-repose-platform = "0.17.7"
-repose-render-wgpu = "0.17.7"
+repose-core = "0.17"
+repose-ui = "0.17"
+repose-material = "0.17"
+repose-platform = "0.17"
+repose-render-wgpu = "0.17"
 
 pulldown-cmark = "0.13"
 
@@ -53,3 +53,8 @@ console_error_panic_hook = "0.1"
 console_log = "1"
 getrandom = { version = "0.3", features = ["wasm_js"] }
 wgpu = { version = "29", features = ["webgpu", "webgl"] }
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+strip = true

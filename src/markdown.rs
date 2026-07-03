@@ -430,16 +430,18 @@ fn heading_level_to_u8(level: HeadingLevel) -> u8 {
 fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
     match block {
         Block::Heading { level, inlines } => render_heading(*level, inlines, on_link),
+
         Block::Paragraph(inlines) => {
             FlowRow(Modifier::new().fill_max_width()).child(render_inlines(
                 inlines,
                 InlineStyle {
-                    size: 16.0,
+                    size: 15.0,
                     color: theme().on_surface,
                 },
                 on_link,
             ))
         }
+
         Block::BlockQuote(blocks) => {
             let children = intersperse_vertical(
                 blocks
@@ -449,45 +451,66 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 8.0,
             );
 
-            Row(Modifier::new().fill_max_width()).child((
-                Surface(
-                    Modifier::new()
-                        .width(4.0)
-                        .fill_max_height()
-                        .background(theme().primary),
-                    Box(Modifier::new()),
-                ),
-                hspace(12.0),
-                Surface(
-                    Modifier::new().fill_max_width(),
-                    Column(Modifier::new().fill_max_width()).child(children),
-                ),
-            ))
+            Surface(
+                Modifier::new()
+                    .fill_max_width()
+                    .background(theme().surface)
+                    .border(1.0, theme().outline, 8.0),
+                Row(Modifier::new().fill_max_width()).child((
+                    Surface(
+                        Modifier::new()
+                            .width(4.0)
+                            .fill_max_height()
+                            .background(theme().primary),
+                        Box(Modifier::new()),
+                    ),
+                    Surface(
+                        Modifier::new().fill_max_width().weight(1.0).padding(12.0),
+                        Column(Modifier::new().fill_max_width()).child(children),
+                    ),
+                )),
+            )
         }
+
         Block::CodeBlock { lang, code } => {
-            let mut children = Vec::new();
+            let mut children: Vec<View> = Vec::new();
 
             if let Some(lang) = lang {
                 children.push(
-                    Text(lang.clone())
-                        .size(12.0)
-                        .color(theme().on_surface_variant),
+                    Row(Modifier::new().fill_max_width()).child((
+                        Surface(
+                            Modifier::new()
+                                .padding(4.0)
+                                .background(theme().background)
+                                .border(1.0, theme().outline, 6.0),
+                            Text(lang.clone())
+                                .font_family("monospace")
+                                .size(11.0)
+                                .color(theme().primary),
+                        ),
+                        Spacer(),
+                    )),
                 );
                 children.push(vspace(8.0));
             }
 
             children.push(
-                Text(code.clone())
+                Text(code.trim_end().to_string())
                     .font_family("monospace")
-                    .size(14.0)
+                    .size(13.0)
                     .color(theme().on_surface),
             );
 
-            OutlinedCard(
-                Modifier::new().fill_max_width(),
+            Surface(
+                Modifier::new()
+                    .fill_max_width()
+                    .padding(12.0)
+                    .background(theme().surface)
+                    .border(1.0, theme().outline, 10.0),
                 Column(Modifier::new().fill_max_width()).child(children),
             )
         }
+
         Block::List {
             ordered,
             start,
@@ -507,42 +530,46 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                         render_list_item(&marker, &item.blocks, on_link.clone())
                     })
                     .collect(),
-                8.0,
+                6.0,
             );
 
             Column(Modifier::new().fill_max_width()).child(rendered)
         }
+
         Block::Table {
             alignments,
             head,
             rows,
         } => render_table(alignments, head, rows, on_link),
+
         Block::Rule => Divider(),
-        Block::Html(html) => OutlinedCard(
-            Modifier::new().fill_max_width(),
+
+        Block::Html(html) => Surface(
+            Modifier::new()
+                .fill_max_width()
+                .padding(10.0)
+                .background(theme().surface)
+                .border(1.0, theme().outline, 8.0),
             Text(html.clone())
                 .font_family("monospace")
-                .size(13.0)
+                .size(12.0)
                 .color(theme().on_surface_variant),
         ),
     }
 }
 
 fn render_heading(level: u8, inlines: &[Inline], on_link: Rc<dyn Fn(String)>) -> View {
-    let size = match level {
-        1 => 32.0,
-        2 => 26.0,
-        3 => 22.0,
-        4 => 18.0,
-        _ => 16.0,
+    let (size, color) = match level {
+        1 => (30.0, theme().primary),
+        2 => (24.0, theme().on_surface),
+        3 => (20.0, theme().on_surface),
+        4 => (17.0, theme().on_surface),
+        _ => (15.0, theme().on_surface_variant),
     };
 
     let content = FlowRow(Modifier::new().fill_max_width()).child(render_inlines(
         inlines,
-        InlineStyle {
-            size,
-            color: theme().primary,
-        },
+        InlineStyle { size, color },
         on_link,
     ));
 
@@ -554,38 +581,24 @@ fn render_heading(level: u8, inlines: &[Inline], on_link: Rc<dyn Fn(String)>) ->
 }
 
 fn render_list_item(marker: &str, blocks: &[Block], on_link: Rc<dyn Fn(String)>) -> View {
-    let rendered_blocks: Vec<View> = blocks
-        .iter()
-        .flat_map(|b| match b {
-            Block::Paragraph(inlines) => {
-                let texts: Vec<View> = render_inlines(
-                    inlines,
-                    InlineStyle {
-                        size: 16.0,
-                        color: theme().on_surface,
-                    },
-                    on_link.clone(),
-                );
-                let mut out = Vec::new();
-                for (i, t) in texts.into_iter().enumerate() {
-                    if i > 0 {
-                        out.push(Text(" ".to_string()).size(16.0).color(theme().on_surface));
-                    }
-                    out.push(t);
-                }
-                out
-            }
-            other => vec![render_block(other, on_link.clone())],
-        })
-        .collect();
+    let rendered = intersperse_vertical(
+        blocks
+            .iter()
+            .map(|b| render_block(b, on_link.clone()))
+            .collect(),
+        4.0,
+    );
 
-    Row(Modifier::new()
-        .fill_max_width()
-        .align_items(AlignItems::Center))
-    .child((
-        Text(marker.to_string()).size(16.0).color(theme().primary),
-        hspace(4.0),
-        Row(Modifier::new().fill_max_width()).child(rendered_blocks),
+    Row(Modifier::new().fill_max_width()).child((
+        Surface(
+            Modifier::new().width(28.0),
+            Text(marker.to_string()).size(15.0).color(theme().primary),
+        ),
+        // Blocks stack vertically so nested lists / paragraphs wrap correctly.
+        Surface(
+            Modifier::new().fill_max_width().weight(1.0),
+            Column(Modifier::new().fill_max_width()).child(rendered),
+        ),
     ))
 }
 
@@ -598,25 +611,33 @@ fn render_table(
     let mut row_views = Vec::new();
 
     if !head.is_empty() {
-        row_views.push(render_table_row(head, true, on_link.clone()));
+        row_views.push(render_table_row(head, true, false, on_link.clone()));
     }
 
-    for row in rows {
-        row_views.push(render_table_row(row, false, on_link.clone()));
+    for (i, row) in rows.iter().enumerate() {
+        // Zebra striping for readability.
+        row_views.push(render_table_row(row, false, i % 2 == 1, on_link.clone()));
     }
 
-    OutlinedCard(
-        Modifier::new().fill_max_width(),
+    Surface(
+        Modifier::new()
+            .fill_max_width()
+            .border(1.0, theme().outline, 10.0),
         Column(Modifier::new().fill_max_width()).child(row_views),
     )
 }
 
-fn render_table_row(row: &[Vec<Inline>], header: bool, on_link: Rc<dyn Fn(String)>) -> View {
+fn render_table_row(
+    row: &[Vec<Inline>],
+    header: bool,
+    striped: bool,
+    on_link: Rc<dyn Fn(String)>,
+) -> View {
     let cells: Vec<View> = row
         .iter()
         .map(|cell| {
             let style = InlineStyle {
-                size: if header { 15.0 } else { 14.0 },
+                size: if header { 14.0 } else { 13.5 },
                 color: if header {
                     theme().primary
                 } else {
@@ -625,10 +646,7 @@ fn render_table_row(row: &[Vec<Inline>], header: bool, on_link: Rc<dyn Fn(String
             };
 
             Surface(
-                Modifier::new()
-                    .weight(1.0)
-                    .padding(8.0)
-                    .border(1.0, theme().outline, 0.0),
+                Modifier::new().weight(1.0).padding(10.0),
                 FlowRow(Modifier::new().fill_max_width()).child(render_inlines(
                     cell,
                     style,
@@ -638,7 +656,19 @@ fn render_table_row(row: &[Vec<Inline>], header: bool, on_link: Rc<dyn Fn(String
         })
         .collect();
 
-    Row(Modifier::new().fill_max_width()).child(cells)
+    let bg = if header || striped {
+        theme().surface
+    } else {
+        theme().background
+    };
+
+    Column(Modifier::new().fill_max_width()).child((
+        Surface(
+            Modifier::new().fill_max_width().background(bg),
+            Row(Modifier::new().fill_max_width()).with_children(cells),
+        ),
+        Divider(),
+    ))
 }
 
 fn render_inlines(
@@ -651,16 +681,22 @@ fn render_inlines(
     for inline in inlines {
         match inline {
             Inline::Text(text) => {
-                views.push(Text(text.clone()).size(style.size).color(style.color));
+                // Split into words so FlowRow can wrap naturally.
+                for word in text.split_inclusive(' ') {
+                    views.push(Text(word.to_string()).size(style.size).color(style.color));
+                }
             }
 
             Inline::Code(text) => {
-                views.push(OutlinedCard(
-                    Modifier::new().padding(4.0),
+                views.push(Surface(
+                    Modifier::new()
+                        .padding(3.0)
+                        .background(theme().surface)
+                        .border(1.0, theme().outline, 6.0),
                     Text(text.clone())
                         .font_family("monospace")
-                        .size((style.size - 1.0).max(12.0))
-                        .color(theme().on_surface),
+                        .size((style.size - 1.5).max(11.0))
+                        .color(theme().primary),
                 ));
             }
 
@@ -668,25 +704,14 @@ fn render_inlines(
                 views.extend(render_inlines(
                     children,
                     InlineStyle {
-                        size: style.size + 1.0,
-                        color: style.color,
+                        size: style.size + 0.5,
+                        color: theme().on_surface,
                     },
                     on_link.clone(),
                 ));
             }
 
-            Inline::Emphasis(children) => {
-                views.extend(render_inlines(
-                    children,
-                    InlineStyle {
-                        size: style.size,
-                        color: theme().on_surface_variant,
-                    },
-                    on_link.clone(),
-                ));
-            }
-
-            Inline::Strike(children) => {
+            Inline::Emphasis(children) | Inline::Strike(children) => {
                 views.extend(render_inlines(
                     children,
                     InlineStyle {
@@ -699,7 +724,7 @@ fn render_inlines(
 
             Inline::Link { label, url } => {
                 let url_clone = url.clone();
-                let on_link = on_link.clone();
+                let handler = on_link.clone();
                 let children = render_inlines(
                     label,
                     InlineStyle {
@@ -710,48 +735,28 @@ fn render_inlines(
                 );
 
                 views.push(Surface(
-                    Modifier::new().on_pointer_up(move |_| {
-                        on_link(url_clone.clone());
-                    }),
+                    Modifier::new().on_pointer_up(move |_| handler(url_clone.clone())),
                     Row(Modifier::new()).with_children(children),
                 ));
             }
 
             Inline::Image { alt, url } => {
-                let label = if alt.is_empty() {
-                    vec![Inline::Text("image".to_string())]
+                let alt_text = if alt.is_empty() {
+                    "image".to_string()
                 } else {
-                    alt.clone()
+                    plain_text(alt)
                 };
                 let url_clone = url.clone();
-                let on_link = on_link.clone();
-                let children = render_inlines(
-                    &label,
-                    InlineStyle {
-                        size: style.size,
-                        color: theme().primary,
-                    },
-                    on_link.clone(),
-                );
+                let handler = on_link.clone();
 
                 views.push(Surface(
-                    Modifier::new().on_pointer_up(move |_| {
-                        on_link(url_clone.clone());
-                    }),
-                    Row(Modifier::new()).with_children(
-                        std::iter::once(
-                            Text("[image: ".to_string())
-                                .size(style.size)
-                                .color(theme().primary),
-                        )
-                        .chain(children)
-                        .chain(std::iter::once(
-                            Text("]".to_string())
-                                .size(style.size)
-                                .color(theme().primary),
-                        ))
-                        .collect::<Vec<_>>(),
-                    ),
+                    Modifier::new()
+                        .padding(4.0)
+                        .border(1.0, theme().outline, 6.0)
+                        .on_pointer_up(move |_| handler(url_clone.clone())),
+                    Text(format!("\u{1F5BC} {}", alt_text))
+                        .size(style.size - 1.0)
+                        .color(theme().primary),
                 ));
             }
 
@@ -761,13 +766,9 @@ fn render_inlines(
 
             Inline::TaskMarker(checked) => {
                 views.push(
-                    Text(if *checked {
-                        "\u{2611} ".to_string()
-                    } else {
-                        "\u{2610} ".to_string()
-                    })
-                    .size(style.size)
-                    .color(theme().primary),
+                    Text(if *checked { "\u{2611} " } else { "\u{2610} " }.to_string())
+                        .size(style.size)
+                        .color(theme().primary),
                 );
             }
         }
@@ -778,43 +779,32 @@ fn render_inlines(
 
 fn plain_text(inlines: &[Inline]) -> String {
     let mut out = String::new();
-
     for inline in inlines {
         match inline {
-            Inline::Text(s) => out.push_str(s),
-            Inline::Code(s) => out.push_str(s),
+            Inline::Text(s) | Inline::Code(s) => out.push_str(s),
             Inline::Strong(xs) | Inline::Emphasis(xs) | Inline::Strike(xs) => {
-                out.push_str(&plain_text(xs));
+                out.push_str(&plain_text(xs))
             }
             Inline::Link { label, .. } => out.push_str(&plain_text(label)),
             Inline::Image { alt, .. } => out.push_str(&plain_text(alt)),
             Inline::SoftBreak | Inline::HardBreak => out.push(' '),
-            Inline::TaskMarker(checked) => {
-                out.push_str(if *checked { "[x] " } else { "[ ] " });
-            }
+            Inline::TaskMarker(c) => out.push_str(if *c { "[x] " } else { "[ ] " }),
         }
     }
-
     out
 }
 
 fn intersperse_vertical(children: Vec<View>, gap: f32) -> Vec<View> {
     let mut out = Vec::new();
-
     for (idx, child) in children.into_iter().enumerate() {
         if idx > 0 {
             out.push(vspace(gap));
         }
         out.push(child);
     }
-
     out
 }
 
 fn vspace(dp: f32) -> View {
     Space(Modifier::new().height(dp))
-}
-
-fn hspace(dp: f32) -> View {
-    Space(Modifier::new().width(dp))
 }
