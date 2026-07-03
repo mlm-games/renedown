@@ -1,8 +1,8 @@
 use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, Options, Parser, Tag, TagEnd,
 };
-use repose_core::prelude::*;
-use repose_material::material3::*;
+use repose_core::{PaddingValues, prelude::*};
+use repose_material::material3::{DividerConfig, HorizontalDivider};
 use repose_ui::*;
 use std::rc::Rc;
 
@@ -451,23 +451,22 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 8.0,
             );
 
-            Surface(
-                Modifier::new()
-                    .fill_max_width()
-                    .background(theme().surface)
-                    .border(1.0, theme().outline, 8.0),
+            Box(Modifier::new()
+                .fill_max_width()
+                .background(theme().surface_container)
+                .clip_rounded(14.0)
+                .border(1.0, theme().outline_variant, 14.0))
+            .child(
                 Row(Modifier::new().fill_max_width()).child((
-                    Surface(
-                        Modifier::new()
-                            .width(4.0)
-                            .fill_max_height()
-                            .background(theme().primary),
-                        Box(Modifier::new()),
-                    ),
-                    Surface(
-                        Modifier::new().fill_max_width().weight(1.0).padding(12.0),
-                        Column(Modifier::new().fill_max_width()).child(children),
-                    ),
+                    Box(Modifier::new()
+                        .width(5.0)
+                        .fill_max_height()
+                        .background(theme().primary)),
+                    Box(Modifier::new()
+                        .fill_max_width()
+                        .flex_grow(1.0)
+                        .padding(14.0))
+                    .child(Column(Modifier::new().fill_max_width()).child(children)),
                 )),
             )
         }
@@ -478,20 +477,25 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
             if let Some(lang) = lang {
                 children.push(
                     Row(Modifier::new().fill_max_width()).child((
-                        Surface(
-                            Modifier::new()
-                                .padding(4.0)
-                                .background(theme().background)
-                                .border(1.0, theme().outline, 6.0),
+                        Box(Modifier::new()
+                            .background(theme().secondary_container)
+                            .clip_rounded(999.0)
+                            .padding_values(PaddingValues {
+                                left: 8.0,
+                                right: 8.0,
+                                top: 4.0,
+                                bottom: 4.0,
+                            }))
+                        .child(
                             Text(lang.clone())
                                 .font_family("monospace")
                                 .size(11.0)
-                                .color(theme().primary),
+                                .color(theme().on_secondary_container),
                         ),
                         Spacer(),
                     )),
                 );
-                children.push(vspace(8.0));
+                children.push(vspace(10.0));
             }
 
             children.push(
@@ -501,14 +505,13 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                     .color(theme().on_surface),
             );
 
-            Surface(
-                Modifier::new()
-                    .fill_max_width()
-                    .padding(12.0)
-                    .background(theme().surface)
-                    .border(1.0, theme().outline, 10.0),
-                Column(Modifier::new().fill_max_width()).child(children),
-            )
+            Box(Modifier::new()
+                .fill_max_width()
+                .background(theme().surface_container)
+                .clip_rounded(16.0)
+                .border(1.0, theme().outline_variant, 16.0)
+                .padding(14.0))
+            .child(Column(Modifier::new().fill_max_width()).child(children))
         }
 
         Block::List {
@@ -522,15 +525,15 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                     .enumerate()
                     .map(|(idx, item)| {
                         let marker = match item.task {
-                            Some(true) => "\u{2611}".to_string(),
-                            Some(false) => "\u{2610}".to_string(),
+                            Some(true) => "☑".to_string(),
+                            Some(false) => "☐".to_string(),
                             None if *ordered => format!("{}.", start + idx),
-                            None => "\u{2022}".to_string(),
+                            None => "•".to_string(),
                         };
                         render_list_item(&marker, &item.blocks, on_link.clone())
                     })
                     .collect(),
-                6.0,
+                7.0,
             );
 
             Column(Modifier::new().fill_max_width()).child(rendered)
@@ -542,14 +545,15 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
             rows,
         } => render_table(alignments, head, rows, on_link),
 
-        Block::Rule => Divider(),
+        Block::Rule => divider(),
 
-        Block::Html(html) => Surface(
-            Modifier::new()
-                .fill_max_width()
-                .padding(10.0)
-                .background(theme().surface)
-                .border(1.0, theme().outline, 8.0),
+        Block::Html(html) => Box(Modifier::new()
+            .fill_max_width()
+            .background(theme().surface_container)
+            .clip_rounded(12.0)
+            .border(1.0, theme().outline_variant, 12.0)
+            .padding(12.0))
+        .child(
             Text(html.clone())
                 .font_family("monospace")
                 .size(12.0)
@@ -560,10 +564,10 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
 
 fn render_heading(level: u8, inlines: &[Inline], on_link: Rc<dyn Fn(String)>) -> View {
     let (size, color) = match level {
-        1 => (30.0, theme().primary),
-        2 => (24.0, theme().on_surface),
-        3 => (20.0, theme().on_surface),
-        4 => (17.0, theme().on_surface),
+        1 => (31.0, theme().primary),
+        2 => (25.0, theme().on_surface),
+        3 => (21.0, theme().on_surface),
+        4 => (18.0, theme().on_surface),
         _ => (15.0, theme().on_surface_variant),
     };
 
@@ -574,7 +578,7 @@ fn render_heading(level: u8, inlines: &[Inline], on_link: Rc<dyn Fn(String)>) ->
     ));
 
     if level <= 2 {
-        Column(Modifier::new().fill_max_width()).child((content, vspace(6.0), Divider()))
+        Column(Modifier::new().fill_max_width()).child((content, vspace(8.0), divider()))
     } else {
         content
     }
@@ -590,15 +594,10 @@ fn render_list_item(marker: &str, blocks: &[Block], on_link: Rc<dyn Fn(String)>)
     );
 
     Row(Modifier::new().fill_max_width()).child((
-        Surface(
-            Modifier::new().width(28.0),
-            Text(marker.to_string()).size(15.0).color(theme().primary),
-        ),
-        // Blocks stack vertically so nested lists / paragraphs wrap correctly.
-        Surface(
-            Modifier::new().fill_max_width().weight(1.0),
-            Column(Modifier::new().fill_max_width()).child(rendered),
-        ),
+        Box(Modifier::new().width(30.0))
+            .child(Text(marker.to_string()).size(15.0).color(theme().primary)),
+        Box(Modifier::new().fill_max_width().flex_grow(1.0))
+            .child(Column(Modifier::new().fill_max_width()).child(rendered)),
     ))
 }
 
@@ -615,16 +614,15 @@ fn render_table(
     }
 
     for (i, row) in rows.iter().enumerate() {
-        // Zebra striping for readability.
         row_views.push(render_table_row(row, false, i % 2 == 1, on_link.clone()));
     }
 
-    Surface(
-        Modifier::new()
-            .fill_max_width()
-            .border(1.0, theme().outline, 10.0),
-        Column(Modifier::new().fill_max_width()).child(row_views),
-    )
+    Box(Modifier::new()
+        .fill_max_width()
+        .background(theme().surface_container_low)
+        .clip_rounded(16.0)
+        .border(1.0, theme().outline_variant, 16.0))
+    .child(Column(Modifier::new().fill_max_width()).child(row_views))
 }
 
 fn render_table_row(
@@ -645,8 +643,7 @@ fn render_table_row(
                 },
             };
 
-            Surface(
-                Modifier::new().weight(1.0).padding(10.0),
+            Box(Modifier::new().flex_grow(1.0).padding(10.0)).child(
                 FlowRow(Modifier::new().fill_max_width()).child(render_inlines(
                     cell,
                     style,
@@ -656,18 +653,18 @@ fn render_table_row(
         })
         .collect();
 
-    let bg = if header || striped {
-        theme().surface
+    let bg = if header {
+        theme().primary_container
+    } else if striped {
+        theme().surface_container
     } else {
-        theme().background
+        theme().surface_container_low
     };
 
     Column(Modifier::new().fill_max_width()).child((
-        Surface(
-            Modifier::new().fill_max_width().background(bg),
-            Row(Modifier::new().fill_max_width()).with_children(cells),
-        ),
-        Divider(),
+        Box(Modifier::new().fill_max_width().background(bg))
+            .child(Row(Modifier::new().fill_max_width()).child(cells)),
+        divider(),
     ))
 }
 
@@ -681,23 +678,30 @@ fn render_inlines(
     for inline in inlines {
         match inline {
             Inline::Text(text) => {
-                // Split into words so FlowRow can wrap naturally.
                 for word in text.split_inclusive(' ') {
                     views.push(Text(word.to_string()).size(style.size).color(style.color));
                 }
             }
 
             Inline::Code(text) => {
-                views.push(Surface(
-                    Modifier::new()
-                        .padding(3.0)
-                        .background(theme().surface)
-                        .border(1.0, theme().outline, 6.0),
-                    Text(text.clone())
-                        .font_family("monospace")
-                        .size((style.size - 1.5).max(11.0))
-                        .color(theme().primary),
-                ));
+                views.push(
+                    Box(Modifier::new()
+                        .background(theme().surface_container_high)
+                        .clip_rounded(7.0)
+                        .border(1.0, theme().outline_variant, 7.0)
+                        .padding_values(PaddingValues {
+                            left: 5.0,
+                            right: 5.0,
+                            top: 2.0,
+                            bottom: 2.0,
+                        }))
+                    .child(
+                        Text(text.clone())
+                            .font_family("monospace")
+                            .size((style.size - 1.5).max(11.0))
+                            .color(theme().primary),
+                    ),
+                );
             }
 
             Inline::Strong(children) => {
@@ -734,10 +738,12 @@ fn render_inlines(
                     on_link.clone(),
                 );
 
-                views.push(Surface(
-                    Modifier::new().on_pointer_up(move |_| handler(url_clone.clone())),
-                    Row(Modifier::new()).with_children(children),
-                ));
+                views.push(
+                    Box(Modifier::new()
+                        .clickable()
+                        .on_click(move || handler(url_clone.clone())))
+                    .child(Row(Modifier::new()).child(children)),
+                );
             }
 
             Inline::Image { alt, url } => {
@@ -746,18 +752,29 @@ fn render_inlines(
                 } else {
                     plain_text(alt)
                 };
+
                 let url_clone = url.clone();
                 let handler = on_link.clone();
 
-                views.push(Surface(
-                    Modifier::new()
-                        .padding(4.0)
-                        .border(1.0, theme().outline, 6.0)
-                        .on_pointer_up(move |_| handler(url_clone.clone())),
-                    Text(format!("\u{1F5BC} {}", alt_text))
-                        .size(style.size - 1.0)
-                        .color(theme().primary),
-                ));
+                views.push(
+                    Box(Modifier::new()
+                        .background(theme().surface_container)
+                        .clip_rounded(10.0)
+                        .border(1.0, theme().outline_variant, 10.0)
+                        .padding_values(PaddingValues {
+                            left: 8.0,
+                            right: 8.0,
+                            top: 5.0,
+                            bottom: 5.0,
+                        })
+                        .clickable()
+                        .on_click(move || handler(url_clone.clone())))
+                    .child(
+                        Text(format!("🖼 {alt_text}"))
+                            .size(style.size - 1.0)
+                            .color(theme().primary),
+                    ),
+                );
             }
 
             Inline::SoftBreak | Inline::HardBreak => {
@@ -766,7 +783,7 @@ fn render_inlines(
 
             Inline::TaskMarker(checked) => {
                 views.push(
-                    Text(if *checked { "\u{2611} " } else { "\u{2610} " }.to_string())
+                    Text(if *checked { "☑ " } else { "☐ " }.to_string())
                         .size(style.size)
                         .color(theme().primary),
                 );
@@ -775,6 +792,10 @@ fn render_inlines(
     }
 
     views
+}
+
+fn divider() -> View {
+    HorizontalDivider(DividerConfig::default())
 }
 
 fn plain_text(inlines: &[Inline]) -> String {
@@ -806,5 +827,5 @@ fn intersperse_vertical(children: Vec<View>, gap: f32) -> Vec<View> {
 }
 
 fn vspace(dp: f32) -> View {
-    Space(Modifier::new().height(dp))
+    Box(Modifier::new().height(dp).width(1.0))
 }

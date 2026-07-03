@@ -23,8 +23,9 @@ use winit::platform::android::activity::AndroidApp;
 #[cfg(target_os = "android")]
 #[unsafe(no_mangle)]
 pub extern "C" fn android_main(android_app: AndroidApp) {
-    android_logger::init_once(
-        android_logger::Config::default().with_max_level(LevelFilter::Info),
-    );
-    let _ = run_android_app(android_app, |s, _rc| app::app(s));
+    android_logger::init_once(android_logger::Config::default().with_max_level(LevelFilter::Info));
+
+    if let Err(err) = run_android_app(android_app, |s, _rc| app::app(s)) {
+        log::error!("Renedown failed: {err:?}");
+    }
 }

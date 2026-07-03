@@ -1,13 +1,13 @@
 [package]
 name = "renedown"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 publish = false
 default-run = "renedown-desktop"
 
 [lib]
 name = "renedown"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
@@ -25,15 +25,15 @@ build_targets = ["aarch64-linux-android"]
 split_per_abi = true
 
 [package.metadata.android.application]
-label = "Repose Markdown"
+label = "Renedown"
 fullscreen = false
 
 [dependencies]
-repose-core = "0.17"
-repose-ui = "0.17"
-repose-material = "0.17"
-repose-platform = "0.17"
-repose-render-wgpu = "0.17"
+repose-core = "0.21"
+repose-ui = "0.21"
+repose-material = "0.21"
+repose-platform = "0.21"
+repose-render-wgpu = "0.21"
 
 pulldown-cmark = "0.13"
 
@@ -52,7 +52,7 @@ web-sys = "0.3"
 console_error_panic_hook = "0.1"
 console_log = "1"
 getrandom = { version = "0.3", features = ["wasm_js"] }
-wgpu = { version = "29", features = ["webgpu", "webgl"] }
+wgpu = { version = "30", features = ["webgpu", "webgl"] }
 
 [profile.release]
 opt-level = "s"
