@@ -724,7 +724,7 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
             children.push(
                 Text(code.trim_end().to_string())
                     .font_family("monospace")
-                    .size(13.0)
+                    .size(15.0)
                     .color(theme().on_surface),
             );
 
