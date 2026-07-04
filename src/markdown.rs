@@ -3,7 +3,7 @@ use pulldown_cmark::{
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
 use repose_core::{PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
-use repose_material::material3::{DividerConfig, HorizontalDivider};
+use repose_material::material3::{DividerConfig, HorizontalDivider, IconButton, IconButtonConfig};
 use repose_material::{Icon, material_symbols};
 use repose_ui::*;
 use std::cell::RefCell;
@@ -746,13 +746,23 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                                 },
                             ),
                             Spacer(),
-                            Box(Modifier::new()
-                                .clickable()
-                                .on_click({
+                            IconButton(
+                                Icon(Symbols::CONTENT_COPY).size(18.0).color(theme().on_surface.with_alpha_f32(0.6)),
+                                {
                                     let code_copy = code_text.clone();
                                     move || copy_to_clipboard(&code_copy)
-                                }))
-                            .child(Icon(Symbols::CONTENT_COPY).size(18.0).color(theme().on_surface.with_alpha_f32(0.6))),
+                                },
+                                IconButtonConfig {
+                                    container_size: Some(32.0),
+                                    colors: repose_material::material3::IconButtonColors {
+                                        container_color: Color::TRANSPARENT,
+                                        content_color: theme().on_surface.with_alpha_f32(0.6),
+                                        disabled_container_color: Color::TRANSPARENT,
+                                        disabled_content_color: theme().on_surface.with_alpha_f32(0.38),
+                                    },
+                                    ..Default::default()
+                                },
+                            ),
                         )),
                     Box(Modifier::new().padding(14.0)).child(highlight_code(&code_text, lang.as_deref())),
                 )),
