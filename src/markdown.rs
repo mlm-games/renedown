@@ -982,7 +982,7 @@ fn render_table_row(
 
             let justify = cell_justify(alignments.get(idx));
 
-            Box(Modifier::new().flex_grow(1.0).padding(10.0)).child(
+            Box(Modifier::new().flex_grow(1.0).flex_basis(0.0).padding(10.0)).child(
                 Row(Modifier::new().fill_max_width().justify_content(justify))
                     .child(render_rich_text(cell, style, on_link.clone())),
             )
