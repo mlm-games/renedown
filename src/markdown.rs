@@ -2,9 +2,10 @@ use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, LinkType, MetadataBlockKind,
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
-use repose_core::{PaddingValues, prelude::*};
+use repose_core::{PaddingValues, TextDecoration, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider};
 use repose_ui::*;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -96,9 +97,21 @@ struct InlineStyle {
     color: Color,
 }
 
+fn parse_markdown_cached<'a>(src: &'a str) -> Rc<Vec<Block>> {
+    let cache = remember_with_key("renedown:parse_cache", || {
+        Rc::new(RefCell::new((String::new(), Rc::new(Vec::new()))))
+    });
+    let mut cache = cache.borrow_mut();
+    if cache.0 != src {
+        cache.0 = src.to_string();
+        cache.1 = Rc::new(parse_markdown(src));
+    }
+    cache.1.clone()
+}
+
 #[allow(non_snake_case)]
 pub fn MarkdownDocument(src: &str, on_link: Rc<dyn Fn(String)>) -> View {
-    let blocks = parse_markdown(src);
+    let blocks = parse_markdown_cached(src);
     let rendered = intersperse_vertical(
         blocks
             .iter()
@@ -127,8 +140,7 @@ fn parse_markdown(src: &str) -> Vec<Block> {
     options.insert(Options::ENABLE_WIKILINKS);
     options.insert(Options::ENABLE_GFM);
 
-    let events: Vec<Event<'_>> =
-        TextMergeStream::new(Parser::new_ext(src, options)).collect();
+    let events: Vec<Event<'_>> = TextMergeStream::new(Parser::new_ext(src, options)).collect();
     let mut pos = 0usize;
     parse_blocks(&events, &mut pos)
 }
@@ -148,10 +160,7 @@ fn parse_blocks(events: &[Event<'_>], pos: &mut usize) -> Vec<Block> {
             }
 
             Event::Start(Tag::Heading {
-                level,
-                id,
-                classes,
-                ..
+                level, id, classes, ..
             }) => {
                 let level = heading_level_to_u8(*level);
                 let id = id.as_ref().map(|s| s.to_string());
@@ -423,10 +432,7 @@ fn parse_table_cells(
     cells
 }
 
-fn parse_definition_list(
-    events: &[Event<'_>],
-    pos: &mut usize,
-) -> Vec<DefinitionListEntry> {
+fn parse_definition_list(events: &[Event<'_>], pos: &mut usize) -> Vec<DefinitionListEntry> {
     let mut entries = Vec::new();
 
     while let Some(event) = events.get(*pos) {
@@ -434,7 +440,9 @@ fn parse_definition_list(
             Event::Start(Tag::DefinitionListTitle) => {
                 *pos += 1;
                 let title = parse_inlines(events, pos);
-                consume_end(events, pos, |end| matches!(end, TagEnd::DefinitionListTitle));
+                consume_end(events, pos, |end| {
+                    matches!(end, TagEnd::DefinitionListTitle)
+                });
                 entries.push(DefinitionListEntry {
                     title,
                     definitions: Vec::new(),
@@ -443,7 +451,9 @@ fn parse_definition_list(
             Event::Start(Tag::DefinitionListDefinition) => {
                 *pos += 1;
                 let def = parse_blocks(events, pos);
-                consume_end(events, pos, |end| matches!(end, TagEnd::DefinitionListDefinition));
+                consume_end(events, pos, |end| {
+                    matches!(end, TagEnd::DefinitionListDefinition)
+                });
                 if let Some(last) = entries.last_mut() {
                     last.definitions.push(def);
                 } else {
@@ -590,9 +600,7 @@ fn parse_inlines(events: &[Event<'_>], pos: &mut usize) -> Vec<Inline> {
 
             Event::End(_) => break,
 
-            _ => {
-                *pos += 1;
-            }
+            _ => break,
         }
     }
 
@@ -679,15 +687,9 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 .border(1.0, theme().outline_variant, 14.0))
             .child(
                 Row(Modifier::new().fill_max_width()).child((
-                    Box(Modifier::new()
-                        .width(5.0)
-                        .fill_max_height()
-                        .background(theme().primary)),
-                    Box(Modifier::new()
-                        .fill_max_width()
-                        .flex_grow(1.0)
-                        .padding(14.0))
-                    .child(Column(Modifier::new().fill_max_width()).child(children)),
+                    Box(Modifier::new().width(5.0).background(theme().primary)),
+                    Box(Modifier::new().flex_grow(1.0).padding(14.0))
+                        .child(Column(Modifier::new().fill_max_width()).child(children)),
                 )),
             )
         }
@@ -757,7 +759,16 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 7.0,
             );
 
-            Column(Modifier::new().fill_max_width()).child(rendered)
+            // Left padding creates visual nesting for nested lists.
+            Box(Modifier::new()
+                .fill_max_width()
+                .padding_values(PaddingValues {
+                    left: 20.0,
+                    right: 0.0,
+                    top: 0.0,
+                    bottom: 0.0,
+                }))
+            .child(Column(Modifier::new().fill_max_width()).child(rendered))
         }
 
         Block::Table {
@@ -784,16 +795,18 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 .clip_rounded(12.0)
                 .border(1.0, theme().outline_variant, 12.0)
                 .padding(12.0))
-            .child(Column(Modifier::new().fill_max_width()).child((
-                Text(format!("metadata ({label})"))
-                    .size(11.0)
-                    .color(theme().primary),
-                vspace(4.0),
-                Text(body.trim().to_string())
-                    .font_family("monospace")
-                    .size(12.0)
-                    .color(theme().on_surface_variant),
-            )))
+            .child(
+                Column(Modifier::new().fill_max_width()).child((
+                    Text(format!("metadata ({label})"))
+                        .size(11.0)
+                        .color(theme().primary),
+                    vspace(4.0),
+                    Text(body.trim().to_string())
+                        .font_family("monospace")
+                        .size(12.0)
+                        .color(theme().on_surface_variant),
+                )),
+            )
         }
 
         Block::FootnoteDefinition { label, blocks } => {
@@ -810,13 +823,15 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 .clip_rounded(12.0)
                 .border(1.0, theme().outline_variant, 12.0)
                 .padding(12.0))
-            .child(Column(Modifier::new().fill_max_width()).child((
-                Text(format!("[^{label}]"))
-                    .size(11.0)
-                    .color(theme().primary),
-                vspace(4.0),
-                Column(Modifier::new().fill_max_width()).child(children),
-            )))
+            .child(
+                Column(Modifier::new().fill_max_width()).child((
+                    Text(format!("[^{label}]"))
+                        .size(11.0)
+                        .color(theme().primary),
+                    vspace(4.0),
+                    Column(Modifier::new().fill_max_width()).child(children),
+                )),
+            )
         }
 
         Block::DisplayMath(m) => Box(Modifier::new()
@@ -831,10 +846,11 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 bottom: 12.0,
             }))
         .child(
-            Text(format!("𝑓  {}", m.trim()))
-                .font_family("monospace")
-                .size(14.0)
-                .color(theme().on_surface),
+            Row(Modifier::new().fill_max_width().align_items(AlignItems::FLEX_START))
+                .child((
+                    Text("𝑓  ").font_family("monospace").size(14.0).color(theme().on_surface),
+                    render_math_string(m.trim(), 14.0),
+                )),
         ),
     }
 }
@@ -903,7 +919,7 @@ fn render_list_item(marker: &str, blocks: &[Block], on_link: Rc<dyn Fn(String)>)
     Row(Modifier::new().fill_max_width()).child((
         Box(Modifier::new().width(30.0))
             .child(Text(marker.to_string()).size(15.0).color(theme().primary)),
-        Box(Modifier::new().fill_max_width().flex_grow(1.0))
+        Box(Modifier::new().flex_grow(1.0))
             .child(Column(Modifier::new().fill_max_width()).child(rendered)),
     ))
 }
@@ -988,10 +1004,7 @@ fn render_table_row(
     ))
 }
 
-fn render_definition_list(
-    entries: &[DefinitionListEntry],
-    on_link: Rc<dyn Fn(String)>,
-) -> View {
+fn render_definition_list(entries: &[DefinitionListEntry], on_link: Rc<dyn Fn(String)>) -> View {
     let items: Vec<View> = entries
         .iter()
         .map(|entry| {
@@ -1018,7 +1031,7 @@ fn render_definition_list(
                     Row(Modifier::new().fill_max_width()).child((
                         Box(Modifier::new().width(18.0))
                             .child(Text("—".to_string()).size(14.0).color(theme().outline)),
-                        Box(Modifier::new().fill_max_width().flex_grow(1.0))
+                        Box(Modifier::new().flex_grow(1.0))
                             .child(Column(Modifier::new().fill_max_width()).child(def_children)),
                     ))
                 })
@@ -1083,88 +1096,120 @@ fn render_rich_text(inlines: &[Inline], style: InlineStyle, on_link: Rc<dyn Fn(S
     }
 }
 
-fn render_inlines(
-    inlines: &[Inline],
-    style: InlineStyle,
-    on_link: Rc<dyn Fn(String)>,
-) -> Vec<View> {
+fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(String)>) -> Vec<View> {
     let mut views = Vec::new();
+    let mut text_buf = String::new();
+    let mut spans: Vec<TextSpan> = Vec::new();
+
+    let flush = |views: &mut Vec<View>, text_buf: &mut String, spans: &mut Vec<TextSpan>| {
+        if !text_buf.is_empty() {
+            let text = std::mem::take(text_buf);
+            let s = std::mem::take(spans);
+            views.push(
+                AnnotatedText(AnnotatedString {
+                    text,
+                    spans: s.into(),
+                })
+                .size(base.size)
+                .color(base.color),
+            );
+        }
+    };
 
     for inline in inlines {
         match inline {
-            Inline::Text(text) => {
-                for word in text.split_inclusive(' ') {
-                    views.push(Text(word.to_string()).size(style.size).color(style.color));
-                }
+            Inline::Text(t) => {
+                text_buf.push_str(t);
             }
 
-            Inline::Code(text) => {
-                views.push(inline_code_chip(text, style.size, theme().primary));
+            Inline::Code(t) => {
+                flush(&mut views, &mut text_buf, &mut spans);
+                views.push(inline_code_chip(t, base.size, theme().primary));
             }
 
-            Inline::Html(text) => {
-                views.push(inline_html_chip(text, (style.size - 2.0).max(10.0)));
-            }
-
-            Inline::InlineHtml(text) => {
-                views.push(inline_html_chip(text, (style.size - 2.0).max(10.0)));
+            Inline::Html(t) | Inline::InlineHtml(t) => {
+                flush(&mut views, &mut text_buf, &mut spans);
+                views.push(inline_html_chip(t, (base.size - 2.0).max(10.0)));
             }
 
             Inline::Strong(children) => {
-                views.extend(render_inlines(
-                    children,
-                    InlineStyle {
-                        size: style.size + 0.5,
-                        color: theme().on_surface,
-                    },
-                    on_link.clone(),
-                ));
+                let start = text_buf.len();
+                let child_style = InlineStyle {
+                    size: base.size + 0.5,
+                    color: theme().on_surface,
+                };
+                accumulate_text_inlines(children, child_style, &mut text_buf, &mut spans, &on_link);
+                if text_buf.len() > start {
+                    spans.push(TextSpan {
+                        start,
+                        end: text_buf.len(),
+                        style: SpanStyle {
+                            font_size: Some(child_style.size),
+                            color: Some(child_style.color),
+                            ..SpanStyle::default()
+                        },
+                    });
+                }
             }
 
             Inline::Emphasis(children) => {
-                views.extend(render_inlines(
-                    children,
-                    InlineStyle {
-                        size: style.size,
-                        color: theme().on_surface_variant,
-                    },
-                    on_link.clone(),
-                ));
+                let start = text_buf.len();
+                accumulate_text_inlines(children, base, &mut text_buf, &mut spans, &on_link);
+                if text_buf.len() > start {
+                    spans.push(TextSpan {
+                        start,
+                        end: text_buf.len(),
+                        style: SpanStyle {
+                            color: Some(theme().on_surface_variant),
+                            ..SpanStyle::default()
+                        },
+                    });
+                }
             }
 
             Inline::Strike(children) => {
-                let sub = plain_text(children);
-                let struck: String = sub
-                    .chars()
-                    .flat_map(|c| [c, '\u{0336}'])
-                    .collect();
-                views.push(
-                    Text(struck)
-                        .size(style.size)
-                        .color(theme().outline),
-                );
+                let start = text_buf.len();
+                accumulate_text_inlines(children, base, &mut text_buf, &mut spans, &on_link);
+                if text_buf.len() > start {
+                    spans.push(TextSpan {
+                        start,
+                        end: text_buf.len(),
+                        style: SpanStyle {
+                            color: Some(theme().outline),
+                            text_decoration: Some(TextDecoration {
+                                strikethrough: true,
+                                ..TextDecoration::default()
+                            }),
+                            ..SpanStyle::default()
+                        },
+                    });
+                }
             }
 
             Inline::Superscript(children) => {
-                views.extend(render_inlines(
-                    children,
-                    InlineStyle {
-                        size: (style.size * 0.72).max(9.0),
-                        color: theme().primary,
-                    },
-                    on_link.clone(),
-                ));
+                flush(&mut views, &mut text_buf, &mut spans);
+                let child_style = InlineStyle {
+                    size: (base.size * 0.65).max(9.0),
+                    color: theme().primary,
+                };
+                let text = plain_text(children);
+                views.push(
+                    Box(Modifier::new().translate(0.0, -base.size * 0.15))
+                        .child(Text(text).size(child_style.size).color(child_style.color)),
+                );
             }
 
             Inline::Subscript(children) => {
-                views.extend(render_inlines(
-                    children,
-                    InlineStyle {
-                        size: (style.size * 0.72).max(9.0),
-                        color: theme().tertiary,
-                    },
-                    on_link.clone(),
-                ));
+                flush(&mut views, &mut text_buf, &mut spans);
+                let child_style = InlineStyle {
+                    size: (base.size * 0.65).max(9.0),
+                    color: theme().tertiary,
+                };
+                let text = plain_text(children);
+                views.push(
+                    Box(Modifier::new().translate(0.0, base.size * 0.7))
+                        .child(Text(text).size(child_style.size).color(child_style.color)),
+                );
             }
 
             Inline::Link {
@@ -1173,12 +1218,13 @@ fn render_inlines(
                 url,
                 title: _,
             } => {
+                flush(&mut views, &mut text_buf, &mut spans);
                 let url_clone = url.clone();
                 let handler = on_link.clone();
                 let mut children = render_inlines(
                     label,
                     InlineStyle {
-                        size: style.size,
+                        size: base.size,
                         color: theme().primary,
                     },
                     on_link.clone(),
@@ -1187,10 +1233,14 @@ fn render_inlines(
                 if matches!(link_type, LinkType::WikiLink { .. }) {
                     children.insert(
                         0,
-                        Text("[[".to_string()).size(style.size).color(theme().outline),
+                        Text("[[".to_string())
+                            .size(base.size)
+                            .color(theme().outline),
                     );
                     children.push(
-                        Text("]]".to_string()).size(style.size).color(theme().outline),
+                        Text("]]".to_string())
+                            .size(base.size)
+                            .color(theme().outline),
                     );
                 }
 
@@ -1208,6 +1258,7 @@ fn render_inlines(
                 url,
                 title,
             } => {
+                flush(&mut views, &mut text_buf, &mut spans);
                 let alt = if label.is_empty() {
                     "image".to_string()
                 } else {
@@ -1237,13 +1288,15 @@ fn render_inlines(
                         .on_click(move || handler(url_clone.clone())))
                     .child(
                         Text(format!("🖼 {alt}{hint}"))
-                            .size((style.size - 1.0).max(11.0))
+                            .size((base.size - 1.0).max(11.0))
                             .color(theme().primary),
                     ),
                 );
             }
 
             Inline::InlineMath(m) => {
+                flush(&mut views, &mut text_buf, &mut spans);
+                let math_size = (base.size - 1.0).max(11.0);
                 views.push(
                     Box(Modifier::new()
                         .background(theme().surface_container_high)
@@ -1254,16 +1307,12 @@ fn render_inlines(
                             top: 1.0,
                             bottom: 1.0,
                         }))
-                    .child(
-                        Text(m.clone())
-                            .font_family("monospace")
-                            .size((style.size - 1.0).max(11.0))
-                            .color(theme().on_surface),
-                    ),
+                    .child(render_math_string(m, math_size)),
                 );
             }
 
             Inline::FootnoteReference(label) => {
+                flush(&mut views, &mut text_buf, &mut spans);
                 views.push(
                     Box(Modifier::new()
                         .background(theme().secondary_container)
@@ -1283,24 +1332,109 @@ fn render_inlines(
             }
 
             Inline::SoftBreak => {
-                views.push(Text(" ".to_string()).size(style.size).color(style.color));
+                text_buf.push(' ');
             }
 
             Inline::HardBreak => {
+                flush(&mut views, &mut text_buf, &mut spans);
                 views.push(Box(Modifier::new().fill_max_width().height(0.0)));
             }
 
             Inline::TaskMarker(checked) => {
+                flush(&mut views, &mut text_buf, &mut spans);
                 views.push(
                     Text(if *checked { "☑ " } else { "☐ " }.to_string())
-                        .size(style.size)
+                        .size(base.size)
                         .color(theme().primary),
                 );
             }
         }
     }
 
+    flush(&mut views, &mut text_buf, &mut spans);
     views
+}
+
+/// Recursively accumulate text-style inlines into the AnnotatedString builder.
+/// Non-text inlines encountered at any depth are converted to plain text
+/// (they're extremely rare inside formatting like **bold `code`**).
+fn accumulate_text_inlines(
+    inlines: &[Inline],
+    style: InlineStyle,
+    text_buf: &mut String,
+    spans: &mut Vec<TextSpan>,
+    on_link: &Rc<dyn Fn(String)>,
+) {
+    for inline in inlines {
+        match inline {
+            Inline::Text(t) => text_buf.push_str(t),
+            Inline::Strong(children) => {
+                let start = text_buf.len();
+                accumulate_text_inlines(children, style, text_buf, spans, on_link);
+                if text_buf.len() > start {
+                    spans.push(TextSpan {
+                        start,
+                        end: text_buf.len(),
+                        style: SpanStyle {
+                            ..SpanStyle::default()
+                        },
+                    });
+                }
+            }
+            Inline::Emphasis(children) => {
+                let start = text_buf.len();
+                accumulate_text_inlines(children, style, text_buf, spans, on_link);
+                if text_buf.len() > start {
+                    spans.push(TextSpan {
+                        start,
+                        end: text_buf.len(),
+                        style: SpanStyle {
+                            color: Some(theme().on_surface_variant),
+                            ..SpanStyle::default()
+                        },
+                    });
+                }
+            }
+            Inline::Strike(children) => {
+                let start = text_buf.len();
+                accumulate_text_inlines(children, style, text_buf, spans, on_link);
+                if text_buf.len() > start {
+                    spans.push(TextSpan {
+                        start,
+                        end: text_buf.len(),
+                        style: SpanStyle {
+                            color: Some(theme().outline),
+                            text_decoration: Some(TextDecoration {
+                                strikethrough: true,
+                                ..TextDecoration::default()
+                            }),
+                            ..SpanStyle::default()
+                        },
+                    });
+                }
+            }
+            Inline::Superscript(children) | Inline::Subscript(children) => {
+                text_buf.push_str(&plain_text(children));
+            }
+            // Non-text inlines inside formatting: fall back to plain text
+            Inline::Code(t) | Inline::Html(t) | Inline::InlineHtml(t) | Inline::InlineMath(t) => {
+                text_buf.push_str(t)
+            }
+            Inline::Link { label, .. } | Inline::Image { label, .. } => {
+                text_buf.push_str(&plain_text(label));
+            }
+            Inline::FootnoteReference(l) => {
+                text_buf.push('[');
+                text_buf.push_str(l);
+                text_buf.push(']');
+            }
+            Inline::SoftBreak => text_buf.push(' '),
+            Inline::HardBreak => text_buf.push('\n'),
+            Inline::TaskMarker(c) => {
+                text_buf.push_str(if *c { "[x] " } else { "[ ] " });
+            }
+        }
+    }
 }
 
 fn inline_code_chip(text: &str, base_size: f32, color: Color) -> View {
@@ -1348,8 +1482,11 @@ fn plain_text(inlines: &[Inline]) -> String {
     let mut out = String::new();
     for inline in inlines {
         match inline {
-            Inline::Text(s) | Inline::Code(s) | Inline::Html(s)
-            | Inline::InlineHtml(s) | Inline::InlineMath(s) => out.push_str(s),
+            Inline::Text(s)
+            | Inline::Code(s)
+            | Inline::Html(s)
+            | Inline::InlineHtml(s)
+            | Inline::InlineMath(s) => out.push_str(s),
             Inline::Strong(xs)
             | Inline::Emphasis(xs)
             | Inline::Strike(xs)
@@ -1403,4 +1540,192 @@ fn intersperse_vertical(children: Vec<View>, gap: f32) -> Vec<View> {
 
 fn vspace(dp: f32) -> View {
     Box(Modifier::new().height(dp).width(1.0))
+}
+
+/// Simple math-text renderer that handles `^{...}` / `^x` superscript and
+/// `_{...}` / `_x` subscript. Everything else is rendered as plain monospace text.
+fn render_math_string(text: &str, font_size: f32) -> View {
+    #[derive(Debug)]
+    enum Seg {
+        Text(String),
+        Sup(String),
+        Sub(String),
+    }
+
+    let mut segs: Vec<Seg> = Vec::new();
+    let mut buf = String::new();
+    let mut chars = text.char_indices().peekable();
+
+    let flush = |buf: &mut String, segs: &mut Vec<Seg>| {
+        if !buf.is_empty() {
+            segs.push(Seg::Text(std::mem::take(buf)));
+        }
+    };
+
+    let parse_braced = |chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>| -> String {
+        let mut inner = String::new();
+        let mut depth = 1u32;
+        while let Some((_, c)) = chars.next() {
+            match c {
+                '{' => {
+                    depth += 1;
+                    inner.push(c);
+                }
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                    inner.push(c);
+                }
+                _ => inner.push(c),
+            }
+        }
+        inner
+    };
+
+    while let Some((_, c)) = chars.next() {
+        match c {
+            '\\' => {
+                if let Some((_, next)) = chars.next() {
+                    buf.push('\\');
+                    buf.push(next);
+                } else {
+                    buf.push('\\');
+                }
+            }
+            '^' => {
+                flush(&mut buf, &mut segs);
+                if chars.peek().is_some_and(|(_, p)| *p == '{') {
+                    chars.next();
+                    let inner = parse_braced(&mut chars);
+                    segs.push(Seg::Sup(inner));
+                } else if let Some((_, p)) = chars.next() {
+                    segs.push(Seg::Sup(p.to_string()));
+                }
+            }
+            '_' => {
+                flush(&mut buf, &mut segs);
+                if chars.peek().is_some_and(|(_, p)| *p == '{') {
+                    chars.next();
+                    let inner = parse_braced(&mut chars);
+                    segs.push(Seg::Sub(inner));
+                } else if let Some((_, p)) = chars.next() {
+                    segs.push(Seg::Sub(p.to_string()));
+                }
+            }
+            _ => buf.push(c),
+        }
+    }
+    flush(&mut buf, &mut segs);
+
+    let sup_size = (font_size * 0.65).max(9.0);
+    let sub_size = (font_size * 0.65).max(9.0);
+    let sup_offset = -font_size * 0.15;
+    let sub_offset = font_size * 0.55;
+
+    let children: Vec<View> = segs
+        .into_iter()
+        .map(|seg| match seg {
+            Seg::Text(t) => {
+                let view: View = Text(t)
+                    .font_family("monospace")
+                    .size(font_size)
+                    .color(theme().on_surface);
+                view
+            }
+            Seg::Sup(t) => {
+                let view: View = Box(Modifier::new().translate(0.0, sup_offset))
+                    .child(
+                        Text(t)
+                            .font_family("monospace")
+                            .size(sup_size)
+                            .color(theme().primary),
+                    );
+                view
+            }
+            Seg::Sub(t) => {
+                let view: View = Box(Modifier::new().translate(0.0, sub_offset))
+                    .child(
+                        Text(t)
+                            .font_family("monospace")
+                            .size(sub_size)
+                            .color(theme().tertiary),
+                    );
+                view
+            }
+        })
+        .collect();
+
+    FlowRow(Modifier::new()).child(children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(src: &str) -> Vec<Block> {
+        let mut opts = Options::empty();
+        opts.insert(Options::ENABLE_TABLES);
+        opts.insert(Options::ENABLE_FOOTNOTES);
+        opts.insert(Options::ENABLE_STRIKETHROUGH);
+        opts.insert(Options::ENABLE_TASKLISTS);
+        opts.insert(Options::ENABLE_SMART_PUNCTUATION);
+        opts.insert(Options::ENABLE_HEADING_ATTRIBUTES);
+        opts.insert(Options::ENABLE_YAML_STYLE_METADATA_BLOCKS);
+        opts.insert(Options::ENABLE_PLUSES_DELIMITED_METADATA_BLOCKS);
+        opts.insert(Options::ENABLE_MATH);
+        opts.insert(Options::ENABLE_DEFINITION_LIST);
+        opts.insert(Options::ENABLE_SUPERSCRIPT);
+        opts.insert(Options::ENABLE_SUBSCRIPT);
+        opts.insert(Options::ENABLE_WIKILINKS);
+        opts.insert(Options::ENABLE_GFM);
+
+        let events: Vec<Event<'_>> = TextMergeStream::new(Parser::new_ext(src, opts)).collect();
+        let mut pos = 0;
+        parse_blocks(&events, &mut pos)
+    }
+
+    #[test]
+    fn nested_lists_are_nested() {
+        let src = "- Outer\n  - Inner\n- Sibling\n";
+        let blocks = parse(src);
+        assert_eq!(blocks.len(), 1);
+        let list = &blocks[0];
+        if let Block::List { items, .. } = list {
+            assert_eq!(items.len(), 2);
+            let outer = &items[0];
+            assert_eq!(outer.blocks.len(), 2);
+            assert!(matches!(outer.blocks[0], Block::Paragraph(_)));
+            assert!(matches!(outer.blocks[1], Block::List { .. }));
+            let sibling = &items[1];
+            assert_eq!(sibling.blocks.len(), 1);
+        } else {
+            panic!("expected Block::List, got {list:?}");
+        }
+    }
+
+    #[test]
+    fn superscript_parsed() {
+        let src = "a ^sup^ b";
+        let blocks = parse(src);
+        assert_eq!(blocks.len(), 1);
+        if let Block::Paragraph(inlines) = &blocks[0] {
+            assert!(inlines.iter().any(|i| matches!(i, Inline::Superscript(_))));
+        } else {
+            panic!("expected Block::Paragraph");
+        }
+    }
+
+    #[test]
+    fn subscript_parsed() {
+        let src = "a ~sub~ b";
+        let blocks = parse(src);
+        assert_eq!(blocks.len(), 1);
+        if let Block::Paragraph(inlines) = &blocks[0] {
+            assert!(inlines.iter().any(|i| matches!(i, Inline::Subscript(_))));
+        } else {
+            panic!("expected Block::Paragraph");
+        }
+    }
 }

@@ -1,7 +1,8 @@
 use crate::markdown::MarkdownDocument;
+use repose_core::scroll::ScrollBinding;
 use repose_core::{PaddingValues, prelude::*, set_theme_default, signal};
 use repose_material::material3::*;
-use repose_ui::scroll::{ScrollArea, ScrollState, remember_scroll_state};
+use repose_ui::scroll::remember_scroll_state;
 use repose_ui::*;
 use std::rc::Rc;
 
@@ -17,11 +18,9 @@ Soft break — same visual line.
 Hard break follows (two trailing spaces)  
 new visual line.
 
-Super^script^ and sub~script~ demo. Math inline: $E = mc^2$.
+Super ^script^ and sub ~script~ demo. Math inline: $E = mc^2$.
 
-$$
-\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}
-$$
+Latex won't work yet
 
 ## Block quote
 
@@ -105,7 +104,7 @@ pub fn app(_s: &mut Scheduler) -> View {
     let doc = remember_with_key("renedown:doc", || signal(SAMPLE.to_string()));
     let last_link = remember_with_key("renedown:last_link", || signal(String::new()));
     let pane = remember_with_key("renedown:pane", || signal(Pane::Preview));
-    let preview_scroll = remember_scroll_state("renedown:preview_scroll");
+    let page_scroll = remember_scroll_state("renedown:page_scroll");
 
     // Compact mode: set by on_size_changed on the root Box.
     let compact = remember_with_key("renedown:compact", || signal(false));
@@ -123,46 +122,55 @@ pub fn app(_s: &mut Scheduler) -> View {
         })
     };
 
-    // Build editor and preview at the composition level where signal
-    // reads ARE reactive. No SubcomposeLayout anywhere in this path.
-    let editor = panel(
-        "Editor",
-        "Write Markdown",
-        editor_view(current_doc.clone(), {
-            let doc = doc.clone();
-            move |s| doc.set(s)
-        }),
-    );
-    let preview = panel(
-        "Preview",
-        "Rendered document",
-        preview_view(current_doc.clone(), preview_scroll.clone(), on_link.clone()),
-    );
-
     let body: View = if is_compact {
-        Column(Modifier::new().fill_max_size().padding(12.0)).child(match current_pane {
-            Pane::Editor => editor,
-            Pane::Preview => preview,
-        })
+        // Only build the visible pane in compact mode.
+        let pane_content = match current_pane {
+            Pane::Editor => panel(
+                "Editor",
+                "Write Markdown",
+                editor_view(current_doc.clone(), {
+                    let doc = doc.clone();
+                    move |s| doc.set(s)
+                }),
+            ),
+            Pane::Preview => panel(
+                "Preview",
+                "Rendered document",
+                preview_view(current_doc.clone(), on_link.clone()),
+            ),
+        };
+        Column(Modifier::new().fill_max_size().padding(12.0)).child(pane_content)
     } else {
         Row(Modifier::new()
             .fill_max_size()
             .padding(18.0)
             .column_gap(18.0))
         .child((
-            Box(Modifier::new().fill_max_height().flex_grow(1.0)).child(editor),
-            Box(Modifier::new().fill_max_height().flex_grow(1.0)).child(preview),
+            Box(Modifier::new().fill_max_height().flex_grow(1.0)).child(panel(
+                "Editor",
+                "Write Markdown",
+                editor_view(current_doc.clone(), {
+                    let doc = doc.clone();
+                    move |s| doc.set(s)
+                }),
+            )),
+            Box(Modifier::new().fill_max_height().flex_grow(1.0)).child(panel(
+                "Preview",
+                "Rendered document",
+                preview_view(current_doc.clone(), on_link.clone()),
+            )),
         ))
     };
 
-    Box(Modifier::new()
-        .fill_max_size()
-        .background(theme().background)
-        .on_size_changed({
-            let compact = compact.clone();
-            move |size| compact.set(size.x < COMPACT_BREAKPOINT)
-        }))
-    .child(Column(Modifier::new().fill_max_size()).child((
+    // Page-wide scroll binding (cached so physics persists).
+    let page_binding =
+        remember_with_key("renedown:page_binding", || page_scroll.to_binding());
+    let page_axis = match &*page_binding {
+        ScrollBinding::Vertical(b) => b.clone(),
+        _ => unreachable!(),
+    };
+
+    let inner = Column(Modifier::new().fill_max_size()).child((
         top_bar(
             is_compact,
             current_pane,
@@ -184,7 +192,20 @@ pub fn app(_s: &mut Scheduler) -> View {
             let last_link = last_link.clone();
             move || last_link.set(String::new())
         }),
-    )))
+    ));
+
+    Box(Modifier::new()
+        .fill_max_size()
+        .background(theme().background)
+        .on_size_changed({
+            let compact = compact.clone();
+            move |size| compact.set(size.x < COMPACT_BREAKPOINT)
+        }))
+    .child(
+        View::new(0, ViewKind::Box)
+            .modifier(Modifier::new().fill_max_size().vertical_scroll(page_axis))
+            .with_children(vec![inner]),
+    )
 }
 
 fn top_bar(
@@ -356,16 +377,9 @@ fn editor_view(value: String, on_change: impl Fn(String) + 'static) -> View {
     )
 }
 
-fn preview_view(value: String, scroll: Rc<ScrollState>, on_link: Rc<dyn Fn(String)>) -> View {
-    ScrollArea(
-        Modifier::new().fill_max_size(),
-        scroll,
-        Box(Modifier::new()
-            .fill_max_width()
-            .background(theme().surface_container_lowest)
-            .padding(18.0))
-        .child(MarkdownDocument(&value, on_link)),
-    )
+fn preview_view(value: String, on_link: Rc<dyn Fn(String)>) -> View {
+    MarkdownDocument(&value, on_link)
+        .modifier(Modifier::new().fill_max_size().background(theme().surface_container_lowest).padding(18.0))
 }
 
 fn divider() -> View {
