@@ -736,7 +736,9 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                                             right: 8.0,
                                             top: 4.0,
                                             bottom: 4.0,
-                                        }))
+                                        })
+                                        .align_items(AlignItems::CENTER)
+                                        .justify_content(JustifyContent::CENTER))
                                     .child(
                                         Text(l.clone())
                                             .font_family("monospace")
