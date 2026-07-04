@@ -2,7 +2,7 @@ use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, LinkType, MetadataBlockKind,
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
-use repose_core::{BaselineShift, PaddingValues, TextDecoration, prelude::*};
+use repose_core::{PaddingValues, TextDecoration, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider};
 use repose_ui::*;
 use std::cell::RefCell;
@@ -1190,41 +1190,29 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
             }
 
             Inline::Superscript(children) => {
-                let start = text_buf.len();
-                let child_size = (base.size * 0.65).max(9.0);
-                accumulate_text_inlines(children, base, &mut text_buf, &mut spans, &on_link);
-                if text_buf.len() > start {
-                    spans.push(TextSpan {
-                        start,
-                        end: text_buf.len(),
-                        style: SpanStyle {
-                            font_size: Some(child_size),
-                            color: Some(theme().primary),
-                            baseline_shift: Some(BaselineShift::Superscript),
-                            ..SpanStyle::default()
-                        },
-                        url: None,
-                    });
-                }
+                flush(&mut views, &mut text_buf, &mut spans);
+                let child_style = InlineStyle {
+                    size: (base.size * 0.65).max(9.0),
+                    color: theme().primary,
+                };
+                let text = plain_text(children);
+                views.push(
+                    Box(Modifier::new().translate(0.0, -base.size * 0.15))
+                        .child(Text(text).size(child_style.size).color(child_style.color)),
+                );
             }
 
             Inline::Subscript(children) => {
-                let start = text_buf.len();
-                let child_size = (base.size * 0.65).max(9.0);
-                accumulate_text_inlines(children, base, &mut text_buf, &mut spans, &on_link);
-                if text_buf.len() > start {
-                    spans.push(TextSpan {
-                        start,
-                        end: text_buf.len(),
-                        style: SpanStyle {
-                            font_size: Some(child_size),
-                            color: Some(theme().tertiary),
-                            baseline_shift: Some(BaselineShift::Subscript),
-                            ..SpanStyle::default()
-                        },
-                        url: None,
-                    });
-                }
+                flush(&mut views, &mut text_buf, &mut spans);
+                let child_style = InlineStyle {
+                    size: (base.size * 0.65).max(9.0),
+                    color: theme().tertiary,
+                };
+                let text = plain_text(children);
+                views.push(
+                    Box(Modifier::new().translate(0.0, base.size * 0.7))
+                        .child(Text(text).size(child_style.size).color(child_style.color)),
+                );
             }
 
             Inline::Link {
@@ -1431,39 +1419,8 @@ fn accumulate_text_inlines(
                     });
                 }
             }
-            Inline::Superscript(children) => {
-                let start = text_buf.len();
-                let child_size = (style.size * 0.65).max(9.0);
-                accumulate_text_inlines(children, style, text_buf, spans, on_link);
-                if text_buf.len() > start {
-                    spans.push(TextSpan {
-                        start,
-                        end: text_buf.len(),
-                        style: SpanStyle {
-                            font_size: Some(child_size),
-                            baseline_shift: Some(BaselineShift::Superscript),
-                            ..SpanStyle::default()
-                        },
-                        url: None,
-                    });
-                }
-            }
-            Inline::Subscript(children) => {
-                let start = text_buf.len();
-                let child_size = (style.size * 0.65).max(9.0);
-                accumulate_text_inlines(children, style, text_buf, spans, on_link);
-                if text_buf.len() > start {
-                    spans.push(TextSpan {
-                        start,
-                        end: text_buf.len(),
-                        style: SpanStyle {
-                            font_size: Some(child_size),
-                            baseline_shift: Some(BaselineShift::Subscript),
-                            ..SpanStyle::default()
-                        },
-                        url: None,
-                    });
-                }
+            Inline::Superscript(children) | Inline::Subscript(children) => {
+                text_buf.push_str(&plain_text(children));
             }
             // Non-text inlines inside formatting: fall back to plain text
             Inline::Code(t) | Inline::Html(t) | Inline::InlineHtml(t) | Inline::InlineMath(t) => {
