@@ -884,11 +884,7 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 bottom: 12.0,
             }))
         .child(
-            Row(Modifier::new().fill_max_width().align_items(AlignItems::FLEX_START))
-                .child((
-                    Text("𝑓  ").font_family("monospace").size(14.0).color(theme().on_surface),
-                    render_math_string(m.trim(), 14.0),
-                )),
+            render_math_string(m.trim(), 14.0),
         ),
     }
 }
