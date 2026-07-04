@@ -9,7 +9,7 @@ fn latex_cmd_to_unicode(cmd: &str) -> Option<&'static str> {
         "gamma" => Some("\u{03B3}"),
         "delta" => Some("\u{03B4}"),
         "epsilon" => Some("\u{03B5}"),
-        "varepsilon" => Some("\u{025B}"),
+        "varepsilon" => Some("\u{03F5}"),
         "zeta" => Some("\u{03B6}"),
         "eta" => Some("\u{03B7}"),
         "theta" => Some("\u{03B8}"),
@@ -179,7 +179,9 @@ fn latex_cmd_to_unicode(cmd: &str) -> Option<&'static str> {
         "leftrightarrow" => Some("\u{2194}"),
         "Leftrightarrow" => Some("\u{21D4}"),
         "mapsto" => Some("\u{21A6}"),
+        "longmapsto" => Some("\u{27FC}"),
         "Longmapsto" => Some("\u{27FC}"),
+        "gets" => Some("\u{2190}"),
         "hookrightarrow" => Some("\u{21AA}"),
         "hookleftarrow" => Some("\u{21A9}"),
         "rightharpoonup" => Some("\u{21C0}"),
@@ -203,9 +205,9 @@ fn latex_cmd_to_unicode(cmd: &str) -> Option<&'static str> {
         "Longleftarrow" => Some("\u{27F8}"),
         "longleftrightarrow" => Some("\u{27F7}"),
         "Longleftrightarrow" => Some("\u{27FA}"),
-        "iff" => Some("\u{27F7}"),
+        "iff" => Some("\u{27FA}"),
         "implies" => Some("\u{27F9}"),
-        "leadsto" => Some("\u{2933}"),
+        "leadsto" => Some("\u{21DD}"),
         // Miscellaneous symbols
         "dots" => Some("\u{2026}"),
         "ldots" => Some("\u{2026}"),
@@ -245,13 +247,46 @@ fn latex_cmd_to_unicode(cmd: &str) -> Option<&'static str> {
 fn latex_is_function_name(cmd: &str) -> bool {
     matches!(
         cmd,
-        "sin" | "cos" | "tan" | "cot" | "sec" | "csc"
-            | "sinh" | "cosh" | "tanh" | "coth"
-            | "arcsin" | "arccos" | "arctan" | "arccot" | "arcsec" | "arccsc"
-            | "log" | "ln" | "lg" | "exp"
-            | "det" | "dim" | "hom" | "ker" | "deg" | "Pr" | "gcd" | "arg"
-            | "min" | "max" | "sup" | "inf" | "lim" | "limsup" | "liminf" | "injlim" | "projlim"
-            | "mod" | "bmod" | "pmod"
+        "sin"
+            | "cos"
+            | "tan"
+            | "cot"
+            | "sec"
+            | "csc"
+            | "sinh"
+            | "cosh"
+            | "tanh"
+            | "coth"
+            | "arcsin"
+            | "arccos"
+            | "arctan"
+            | "arccot"
+            | "arcsec"
+            | "arccsc"
+            | "log"
+            | "ln"
+            | "lg"
+            | "exp"
+            | "det"
+            | "dim"
+            | "hom"
+            | "ker"
+            | "deg"
+            | "Pr"
+            | "gcd"
+            | "arg"
+            | "min"
+            | "max"
+            | "sup"
+            | "inf"
+            | "lim"
+            | "limsup"
+            | "liminf"
+            | "injlim"
+            | "projlim"
+            | "mod"
+            | "bmod"
+            | "pmod"
     )
 }
 
@@ -260,10 +295,14 @@ fn latex_is_ignorable(cmd: &str) -> bool {
         cmd,
         "left"
             | "right"
-            | "bigl" | "bigr"
-            | "Bigl" | "Bigr"
-            | "biggl" | "biggr"
-            | "Biggl" | "Biggr"
+            | "bigl"
+            | "bigr"
+            | "Bigl"
+            | "Bigr"
+            | "biggl"
+            | "biggr"
+            | "Biggl"
+            | "Biggr"
             | "displaystyle"
             | "textstyle"
             | "scriptstyle"
@@ -272,9 +311,14 @@ fn latex_is_ignorable(cmd: &str) -> bool {
             | "nolimits"
             | "quad"
             | "qquad"
-            | "," | ":" | ";" | "!"
             | "negthinspace"
-
+            | "negmedspace"
+            | "negthickspace"
+            | "enspace"
+            | "enskip"
+            | "relax"
+            | "strut"
+            | "mathstrut"
     )
 }
 
@@ -503,39 +547,49 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
                 let num_kids = build_math_view(num, font_size);
                 let den_kids = build_math_view(den, font_size);
                 let line_color = color;
-                Column(Modifier::new().align_items(AlignItems::CENTER))
-                    .child((
-                        FlowRow(Modifier::new()).child(num_kids),
-                        Box(Modifier::new().fill_max_width().height(1.5).background(line_color)),
-                        FlowRow(Modifier::new()).child(den_kids),
-                    ))
+                Column(Modifier::new().align_items(AlignItems::CENTER)).child((
+                    FlowRow(Modifier::new()).child(num_kids),
+                    Box(Modifier::new()
+                        .fill_max_width()
+                        .height(1.5)
+                        .background(line_color)),
+                    FlowRow(Modifier::new()).child(den_kids),
+                ))
             }
             Seg::Sqrt(radicand, degree) => {
                 let rad_kids = build_math_view(radicand, font_size);
                 let overline_color = color;
                 if let Some(deg) = degree {
                     let deg_kids = build_math_view(deg, sup_size);
-                    Row(Modifier::new().align_items(AlignItems::CENTER))
-                        .child((
-                            Box(Modifier::new().translate(0.0, sup_offset))
-                                .child(FlowRow(Modifier::new()).child(deg_kids)),
-                            Text("\u{221A}").font_family("monospace").size(font_size).color(color),
-                            Column(Modifier::new().align_items(AlignItems::CENTER))
-                                .child((
-                                    Box(Modifier::new().fill_max_width().height(1.5).background(overline_color)),
-                                    FlowRow(Modifier::new()).child(rad_kids),
-                                )),
-                        ))
+                    Row(Modifier::new().align_items(AlignItems::CENTER)).child((
+                        Box(Modifier::new().translate(0.0, sup_offset))
+                            .child(FlowRow(Modifier::new()).child(deg_kids)),
+                        Text("\u{221A}")
+                            .font_family("monospace")
+                            .size(font_size)
+                            .color(color),
+                        Column(Modifier::new().align_items(AlignItems::CENTER)).child((
+                            Box(Modifier::new()
+                                .fill_max_width()
+                                .height(1.5)
+                                .background(overline_color)),
+                            FlowRow(Modifier::new()).child(rad_kids),
+                        )),
+                    ))
                 } else {
-                    Row(Modifier::new().align_items(AlignItems::CENTER))
-                        .child((
-                            Text("\u{221A}").font_family("monospace").size(font_size).color(color),
-                            Column(Modifier::new().align_items(AlignItems::CENTER))
-                                .child((
-                                    Box(Modifier::new().fill_max_width().height(1.5).background(overline_color)),
-                                    FlowRow(Modifier::new()).child(rad_kids),
-                                )),
-                        ))
+                    Row(Modifier::new().align_items(AlignItems::CENTER)).child((
+                        Text("\u{221A}")
+                            .font_family("monospace")
+                            .size(font_size)
+                            .color(color),
+                        Column(Modifier::new().align_items(AlignItems::CENTER)).child((
+                            Box(Modifier::new()
+                                .fill_max_width()
+                                .height(1.5)
+                                .background(overline_color)),
+                            FlowRow(Modifier::new()).child(rad_kids),
+                        )),
+                    ))
                 }
             }
         })
