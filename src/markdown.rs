@@ -1,3 +1,4 @@
+use crate::latex::render_math_string;
 use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, LinkType, MetadataBlockKind,
     Options, Parser, Tag, TagEnd, TextMergeStream,
@@ -364,6 +365,9 @@ fn parse_blocks(events: &[Event<'_>], pos: &mut usize) -> Vec<Block> {
                 }
             }
 
+            Event::End(TagEnd::Paragraph) => {
+                *pos += 1;
+            }
             Event::End(_) => break,
 
             _ => {
@@ -1613,123 +1617,7 @@ fn highlight_code(code: &str, lang: Option<&str>) -> View {
         .size(15.0)
 }
 
-/// Simple math-text renderer that handles `^{...}` / `^x` superscript and
-/// `_{...}` / `_x` subscript. Everything else is rendered as plain monospace text.
-fn render_math_string(text: &str, font_size: f32) -> View {
-    #[derive(Debug)]
-    enum Seg {
-        Text(String),
-        Sup(String),
-        Sub(String),
-    }
 
-    let mut segs: Vec<Seg> = Vec::new();
-    let mut buf = String::new();
-    let mut chars = text.char_indices().peekable();
-
-    let flush = |buf: &mut String, segs: &mut Vec<Seg>| {
-        if !buf.is_empty() {
-            segs.push(Seg::Text(std::mem::take(buf)));
-        }
-    };
-
-    let parse_braced = |chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>| -> String {
-        let mut inner = String::new();
-        let mut depth = 1u32;
-        while let Some((_, c)) = chars.next() {
-            match c {
-                '{' => {
-                    depth += 1;
-                    inner.push(c);
-                }
-                '}' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
-                    inner.push(c);
-                }
-                _ => inner.push(c),
-            }
-        }
-        inner
-    };
-
-    while let Some((_, c)) = chars.next() {
-        match c {
-            '\\' => {
-                if let Some((_, next)) = chars.next() {
-                    buf.push('\\');
-                    buf.push(next);
-                } else {
-                    buf.push('\\');
-                }
-            }
-            '^' => {
-                flush(&mut buf, &mut segs);
-                if chars.peek().is_some_and(|(_, p)| *p == '{') {
-                    chars.next();
-                    let inner = parse_braced(&mut chars);
-                    segs.push(Seg::Sup(inner));
-                } else if let Some((_, p)) = chars.next() {
-                    segs.push(Seg::Sup(p.to_string()));
-                }
-            }
-            '_' => {
-                flush(&mut buf, &mut segs);
-                if chars.peek().is_some_and(|(_, p)| *p == '{') {
-                    chars.next();
-                    let inner = parse_braced(&mut chars);
-                    segs.push(Seg::Sub(inner));
-                } else if let Some((_, p)) = chars.next() {
-                    segs.push(Seg::Sub(p.to_string()));
-                }
-            }
-            _ => buf.push(c),
-        }
-    }
-    flush(&mut buf, &mut segs);
-
-    let sup_size = (font_size * 0.65).max(9.0);
-    let sub_size = (font_size * 0.65).max(9.0);
-    let sup_offset = -font_size * 0.15;
-    let sub_offset = font_size * 0.55;
-
-    let children: Vec<View> = segs
-        .into_iter()
-        .map(|seg| match seg {
-            Seg::Text(t) => {
-                let view: View = Text(t)
-                    .font_family("monospace")
-                    .size(font_size)
-                    .color(theme().on_surface);
-                view
-            }
-            Seg::Sup(t) => {
-                let view: View = Box(Modifier::new().translate(0.0, sup_offset))
-                    .child(
-                        Text(t)
-                            .font_family("monospace")
-                            .size(sup_size)
-                            .color(theme().on_surface),
-                    );
-                view
-            }
-            Seg::Sub(t) => {
-                let view: View = Box(Modifier::new().translate(0.0, sub_offset))
-                    .child(
-                        Text(t)
-                            .font_family("monospace")
-                            .size(sub_size)
-                            .color(theme().on_surface),
-                    );
-                view
-            }
-        })
-        .collect();
-
-    FlowRow(Modifier::new()).child(children)
-}
 
 #[cfg(test)]
 mod tests {
@@ -1797,6 +1685,20 @@ mod tests {
             assert!(inlines.iter().any(|i| matches!(i, Inline::Subscript(_))));
         } else {
             panic!("expected Block::Paragraph");
+        }
+    }
+
+    #[test]
+    fn display_math_then_text() {
+        let src = "before\n\n$$\nE = mc^2\n$$\n\nafter\n";
+        let blocks = parse(src);
+        assert_eq!(blocks.len(), 3);
+        assert!(matches!(blocks[0], Block::Paragraph(_)));
+        assert!(matches!(blocks[1], Block::DisplayMath(_)));
+        assert!(matches!(blocks[2], Block::Paragraph(_)));
+        if let Block::Paragraph(inlines) = &blocks[2] {
+            let text = plain_text(inlines);
+            assert_eq!(text, "after");
         }
     }
 }

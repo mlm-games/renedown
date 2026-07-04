@@ -1,4 +1,5 @@
 mod app;
+mod latex;
 mod markdown;
 
 fn main() -> anyhow::Result<()> {

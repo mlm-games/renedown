@@ -1,4 +1,5 @@
 mod app;
+mod latex;
 mod markdown;
 
 #[cfg(target_arch = "wasm32")]
