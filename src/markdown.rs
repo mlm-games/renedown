@@ -6,12 +6,19 @@ use repose_core::{PaddingValues, TextDecoration, clipboard::copy_to_clipboard, p
 use repose_material::material3::{DividerConfig, HorizontalDivider};
 use repose_material::{Icon, material_symbols};
 use repose_ui::*;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::LazyLock;
+use syntect::easy::HighlightLines;
+use syntect::highlighting::ThemeSet;
+use syntect::parsing::SyntaxSet;
 
 material_symbols! {
     CONTENT_COPY : '\u{E14D}',
 }
-use std::cell::RefCell;
-use std::rc::Rc;
+
+static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(|| SyntaxSet::load_defaults_newlines());
+static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(|| ThemeSet::load_defaults());
 
 #[derive(Debug, Clone)]
 enum Block {
@@ -747,12 +754,7 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                                 }))
                             .child(Icon(Symbols::CONTENT_COPY).size(18.0).color(theme().on_surface.with_alpha_f32(0.6))),
                         )),
-                    Box(Modifier::new().padding(14.0)).child(
-                        Text(code_text)
-                            .font_family("monospace")
-                            .size(15.0)
-                            .color(theme().on_surface),
-                    ),
+                    Box(Modifier::new().padding(14.0)).child(highlight_code(&code_text, lang.as_deref())),
                 )),
             )
         }
@@ -1558,6 +1560,45 @@ fn intersperse_vertical(children: Vec<View>, gap: f32) -> Vec<View> {
 
 fn vspace(dp: f32) -> View {
     Box(Modifier::new().height(dp).width(1.0))
+}
+
+fn highlight_code(code: &str, lang: Option<&str>) -> View {
+    let syntax = lang
+        .and_then(|l| {
+            SYNTAX_SET
+                .find_syntax_by_token(l)
+                .or_else(|| SYNTAX_SET.find_syntax_by_name(l))
+                .or_else(|| SYNTAX_SET.find_syntax_by_extension(l))
+        })
+        .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
+
+    let theme_name = if theme().on_surface.0 < 128 {
+        "base16-ocean.light"
+    } else {
+        "base16-ocean.dark"
+    };
+    let theme = &THEME_SET.themes[theme_name];
+    let mut highlighter = HighlightLines::new(syntax, theme);
+
+    let mut builder = repose_core::text::AnnotatedStringBuilder::new();
+    for line in syntect::util::LinesWithEndings::from(code) {
+        let regions = highlighter
+            .highlight_line(line, &SYNTAX_SET)
+            .unwrap_or_default();
+        for (style, text) in &regions {
+            let c = repose_core::Color(
+                style.foreground.r,
+                style.foreground.g,
+                style.foreground.b,
+                style.foreground.a,
+            );
+            builder.push_with_style(text, SpanStyle::default().color(c));
+        }
+    }
+
+    AnnotatedText(builder.build())
+        .font_family("monospace")
+        .size(15.0)
 }
 
 /// Simple math-text renderer that handles `^{...}` / `^x` superscript and
