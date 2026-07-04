@@ -2,9 +2,14 @@ use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, LinkType, MetadataBlockKind,
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
-use repose_core::{PaddingValues, TextDecoration, prelude::*};
+use repose_core::{PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider};
+use repose_material::{Icon, material_symbols};
 use repose_ui::*;
+
+material_symbols! {
+    CONTENT_COPY : '\u{E14D}',
+}
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -695,46 +700,61 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
         }
 
         Block::CodeBlock { lang, code } => {
-            let mut children: Vec<View> = Vec::new();
-
-            if let Some(lang) = lang {
-                children.push(
-                    Row(Modifier::new().fill_max_width()).child((
-                        Box(Modifier::new()
-                            .background(theme().secondary_container)
-                            .clip_rounded(999.0)
-                            .padding_values(PaddingValues {
-                                left: 8.0,
-                                right: 8.0,
-                                top: 4.0,
-                                bottom: 4.0,
-                            }))
-                        .child(
-                            Text(lang.clone())
-                                .font_family("monospace")
-                                .size(11.0)
-                                .color(theme().on_secondary_container),
-                        ),
-                        Spacer(),
-                    )),
-                );
-                children.push(vspace(10.0));
-            }
-
-            children.push(
-                Text(code.trim_end().to_string())
-                    .font_family("monospace")
-                    .size(15.0)
-                    .color(theme().on_surface),
-            );
+            let code_text = code.trim_end().to_string();
 
             Box(Modifier::new()
                 .fill_max_width()
                 .background(theme().surface_container)
                 .clip_rounded(16.0)
-                .border(1.0, theme().outline_variant, 16.0)
-                .padding(14.0))
-            .child(Column(Modifier::new().fill_max_width()).child(children))
+                .border(1.0, theme().outline_variant, 16.0))
+            .child(
+                Column(Modifier::new().fill_max_width()).child((
+                    Row(Modifier::new()
+                        .fill_max_width()
+                        .padding_values(PaddingValues {
+                            left: 14.0,
+                            right: 8.0,
+                            top: 8.0,
+                            bottom: 4.0,
+                        }))
+                        .child((
+                            lang.as_ref().map_or(
+                                Box(Modifier::new()),
+                                |l| {
+                                    Box(Modifier::new()
+                                        .background(theme().secondary_container)
+                                        .clip_rounded(999.0)
+                                        .padding_values(PaddingValues {
+                                            left: 8.0,
+                                            right: 8.0,
+                                            top: 4.0,
+                                            bottom: 4.0,
+                                        }))
+                                    .child(
+                                        Text(l.clone())
+                                            .font_family("monospace")
+                                            .size(11.0)
+                                            .color(theme().on_secondary_container),
+                                    )
+                                },
+                            ),
+                            Spacer(),
+                            Box(Modifier::new()
+                                .clickable()
+                                .on_click({
+                                    let code_copy = code_text.clone();
+                                    move || copy_to_clipboard(&code_copy)
+                                }))
+                            .child(Icon(Symbols::CONTENT_COPY).size(18.0).color(theme().on_surface.with_alpha_f32(0.6))),
+                        )),
+                    Box(Modifier::new().padding(14.0)).child(
+                        Text(code_text)
+                            .font_family("monospace")
+                            .size(15.0)
+                            .color(theme().on_surface),
+                    ),
+                )),
+            )
         }
 
         Block::List {
