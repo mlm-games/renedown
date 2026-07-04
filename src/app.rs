@@ -8,7 +8,7 @@ use std::rc::Rc;
 
 const SAMPLE: &str = r##"# Renedown
 
-A **real** Markdown renderer using `pulldown-cmark 0.13`, drawn with [Repose Material 3](https://example.com).
+A **Multiplatform** Markdown renderer using `pulldown-cmark`, drawn with [Repose Material 3](https://example.com).
 
 ## Typography
 
@@ -163,8 +163,7 @@ pub fn app(_s: &mut Scheduler) -> View {
     };
 
     // Page-wide scroll binding (cached so physics persists).
-    let page_binding =
-        remember_with_key("renedown:page_binding", || page_scroll.to_binding());
+    let page_binding = remember_with_key("renedown:page_binding", || page_scroll.to_binding());
     let page_axis = match &*page_binding {
         ScrollBinding::Vertical(b) => b.clone(),
         _ => unreachable!(),
@@ -310,7 +309,8 @@ fn status_bar(doc: &str, last_link: &str, on_dismiss: impl Fn() + 'static) -> Vi
         children.push(
             Text(format!("Link: {last_link}"))
                 .size(12.0)
-                .color(theme().primary),
+                .color(theme().primary)
+                .url(last_link.to_string()),
         );
         children.push(hspace(8.0));
         children.push(TextButton(
@@ -378,8 +378,12 @@ fn editor_view(value: String, on_change: impl Fn(String) + 'static) -> View {
 }
 
 fn preview_view(value: String, on_link: Rc<dyn Fn(String)>) -> View {
-    MarkdownDocument(&value, on_link)
-        .modifier(Modifier::new().fill_max_size().background(theme().surface_container_lowest).padding(18.0))
+    MarkdownDocument(&value, on_link).modifier(
+        Modifier::new()
+            .fill_max_size()
+            .background(theme().surface_container_lowest)
+            .padding(18.0),
+    )
 }
 
 fn divider() -> View {

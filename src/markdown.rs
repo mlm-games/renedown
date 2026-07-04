@@ -1148,6 +1148,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                             color: Some(child_style.color),
                             ..SpanStyle::default()
                         },
+                        url: None,
                     });
                 }
             }
@@ -1163,6 +1164,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                             color: Some(theme().on_surface_variant),
                             ..SpanStyle::default()
                         },
+                        url: None,
                     });
                 }
             }
@@ -1182,6 +1184,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                             }),
                             ..SpanStyle::default()
                         },
+                        url: None,
                     });
                 }
             }
@@ -1378,6 +1381,7 @@ fn accumulate_text_inlines(
                         style: SpanStyle {
                             ..SpanStyle::default()
                         },
+                        url: None,
                     });
                 }
             }
@@ -1392,6 +1396,7 @@ fn accumulate_text_inlines(
                             color: Some(theme().on_surface_variant),
                             ..SpanStyle::default()
                         },
+                        url: None,
                     });
                 }
             }
@@ -1410,6 +1415,7 @@ fn accumulate_text_inlines(
                             }),
                             ..SpanStyle::default()
                         },
+                        url: None,
                     });
                 }
             }

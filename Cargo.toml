@@ -29,11 +29,11 @@ label = "Renedown"
 fullscreen = false
 
 [dependencies]
-repose-core = "0.21"
-repose-ui = "0.21"
-repose-material = "0.21"
-repose-platform = "0.21"
-repose-render-wgpu = "0.21"
+repose-core = { path = "../repose/crates/repose-core" }
+repose-ui = { path = "../repose/crates/repose-ui" }
+repose-material = { path = "../repose/crates/repose-material" }
+repose-platform = { path = "../repose/crates/repose-platform" }
+repose-render-wgpu = { path = "../repose/crates/repose-render-wgpu" }
 
 pulldown-cmark = "0.13"
 
