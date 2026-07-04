@@ -1124,7 +1124,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
 
             Inline::Code(t) => {
                 flush(&mut views, &mut text_buf, &mut spans);
-                views.push(inline_code_chip(t, base.size, theme().primary));
+                views.push(inline_code_chip(t, base.size, theme().on_surface));
             }
 
             Inline::Html(t) | Inline::InlineHtml(t) => {
@@ -1160,10 +1160,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                     spans.push(TextSpan {
                         start,
                         end: text_buf.len(),
-                        style: SpanStyle {
-                            color: Some(theme().on_surface_variant),
-                            ..SpanStyle::default()
-                        },
+                        style: SpanStyle::default(),
                         url: None,
                     });
                 }
@@ -1177,7 +1174,6 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                         start,
                         end: text_buf.len(),
                         style: SpanStyle {
-                            color: Some(theme().outline),
                             text_decoration: Some(TextDecoration {
                                 strikethrough: true,
                                 ..TextDecoration::default()
@@ -1193,7 +1189,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                 flush(&mut views, &mut text_buf, &mut spans);
                 let child_style = InlineStyle {
                     size: (base.size * 0.65).max(9.0),
-                    color: theme().primary,
+                    color: theme().on_surface,
                 };
                 let text = plain_text(children);
                 views.push(
@@ -1206,7 +1202,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                 flush(&mut views, &mut text_buf, &mut spans);
                 let child_style = InlineStyle {
                     size: (base.size * 0.65).max(9.0),
-                    color: theme().tertiary,
+                    color: theme().on_surface,
                 };
                 let text = plain_text(children);
                 views.push(
@@ -1392,10 +1388,7 @@ fn accumulate_text_inlines(
                     spans.push(TextSpan {
                         start,
                         end: text_buf.len(),
-                        style: SpanStyle {
-                            color: Some(theme().on_surface_variant),
-                            ..SpanStyle::default()
-                        },
+                        style: SpanStyle::default(),
                         url: None,
                     });
                 }
@@ -1408,7 +1401,6 @@ fn accumulate_text_inlines(
                         start,
                         end: text_buf.len(),
                         style: SpanStyle {
-                            color: Some(theme().outline),
                             text_decoration: Some(TextDecoration {
                                 strikethrough: true,
                                 ..TextDecoration::default()
@@ -1646,7 +1638,7 @@ fn render_math_string(text: &str, font_size: f32) -> View {
                         Text(t)
                             .font_family("monospace")
                             .size(sup_size)
-                            .color(theme().primary),
+                            .color(theme().on_surface),
                     );
                 view
             }
@@ -1656,7 +1648,7 @@ fn render_math_string(text: &str, font_size: f32) -> View {
                         Text(t)
                             .font_family("monospace")
                             .size(sub_size)
-                            .color(theme().tertiary),
+                            .color(theme().on_surface),
                     );
                 view
             }
