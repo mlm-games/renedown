@@ -352,11 +352,15 @@ enum Seg {
     Sub(Vec<Seg>),
     Frac(Vec<Seg>, Vec<Seg>),
     Sqrt(Vec<Seg>, Option<Vec<Seg>>),
+    Binom(Vec<Seg>, Vec<Seg>),
+    Font(Vec<Seg>),
+    Accent(&'static str, Vec<Seg>),
 }
 
 fn parse_math_until(
     chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>,
     stop_at_brace: bool,
+    stop_at_bracket: bool,
 ) -> Vec<Seg> {
     let mut segs: Vec<Seg> = Vec::new();
     let mut buf = String::new();
@@ -389,7 +393,7 @@ fn parse_math_until(
                 if cmd == "over" {
                     flush(&mut buf, &mut segs);
                     let num = std::mem::take(&mut segs);
-                    let den = parse_math_until(chars, stop_at_brace);
+                    let den = parse_math_until(chars, stop_at_brace, false);
                     segs = vec![Seg::Frac(num, den)];
                     break;
                 }
@@ -405,7 +409,7 @@ fn parse_math_until(
                         skip_ws(chars);
                         let degree = if chars.peek().is_some_and(|(_, p)| *p == '[') {
                             chars.next();
-                            let inner = parse_math_until(chars, true);
+                            let inner = parse_math_until(chars, false, true);
                             let _close = chars.next();
                             Some(inner)
                         } else {
@@ -413,6 +417,30 @@ fn parse_math_until(
                         };
                         let radicand = parse_math_group(chars);
                         segs.push(Seg::Sqrt(radicand, degree));
+                    }
+                    "binom" => {
+                        flush(&mut buf, &mut segs);
+                        let top = parse_math_group(chars);
+                        let bot = parse_math_group(chars);
+                        segs.push(Seg::Binom(top, bot));
+                    }
+                    "mathbb" | "mathcal" | "mathrm" | "mathbf" | "mathit" | "mathsf" | "mathtt" | "mathscr" | "mathfrak" => {
+                        flush(&mut buf, &mut segs);
+                        let inner = parse_math_group(chars);
+                        segs.push(Seg::Font(inner));
+                    }
+                    "hat" | "bar" | "dot" | "vec" | "tilde" => {
+                        flush(&mut buf, &mut segs);
+                        let combining = match cmd.as_str() {
+                            "hat" => "\u{0302}",
+                            "bar" => "\u{0304}",
+                            "dot" => "\u{0307}",
+                            "vec" => "\u{20D7}",
+                            "tilde" => "\u{0303}",
+                            _ => unreachable!(),
+                        };
+                        let inner = parse_math_group(chars);
+                        segs.push(Seg::Accent(combining, inner));
                     }
                     "text" => {
                         flush(&mut buf, &mut segs);
@@ -427,7 +455,7 @@ fn parse_math_until(
             }
             '{' => {
                 chars.next();
-                let inner = parse_math_until(chars, true);
+                let inner = parse_math_until(chars, true, false);
                 chars.next();
                 for s in inner {
                     match s {
@@ -440,6 +468,7 @@ fn parse_math_until(
                 }
             }
             '}' if stop_at_brace => break,
+            ']' if stop_at_bracket => break,
             '^' => {
                 chars.next();
                 flush(&mut buf, &mut segs);
@@ -466,7 +495,7 @@ fn parse_math_group(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>) 
     skip_ws(chars);
     if chars.peek().is_some_and(|(_, p)| *p == '{') {
         chars.next();
-        let inner = parse_math_until(chars, true);
+        let inner = parse_math_until(chars, true, false);
         chars.next();
         inner
     } else {
@@ -481,7 +510,7 @@ fn parse_math_group(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>) 
 fn parse_super_sub_group(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>) -> Vec<Seg> {
     if chars.peek().is_some_and(|(_, p)| *p == '{') {
         chars.next();
-        let inner = parse_math_until(chars, true);
+        let inner = parse_math_until(chars, true, false);
         chars.next();
         inner
     } else if let Some((_, c)) = chars.next() {
@@ -556,6 +585,33 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
                     FlowRow(Modifier::new()).child(den_kids),
                 ))
             }
+            Seg::Binom(top, bot) => {
+                let top_kids = build_math_view(top, font_size);
+                let bot_kids = build_math_view(bot, font_size);
+                let paren_color = color;
+                Row(Modifier::new().align_items(AlignItems::CENTER)).child((
+                    Text("(").font_family("monospace").size(font_size).color(paren_color),
+                    Column(Modifier::new().align_items(AlignItems::CENTER)).child((
+                        FlowRow(Modifier::new()).child(top_kids),
+                        FlowRow(Modifier::new()).child(bot_kids),
+                    )),
+                    Text(")").font_family("monospace").size(font_size).color(paren_color),
+                ))
+            }
+            Seg::Font(children) => {
+                FlowRow(Modifier::new()).child(build_math_view(children, font_size))
+            }
+            Seg::Accent(combining, children) => {
+                let mut kids = build_math_view(children, font_size);
+                kids.push(
+                    Text(combining)
+                        .font_family("monospace")
+                        .size(font_size)
+                        .color(color)
+                        .into(),
+                );
+                FlowRow(Modifier::new()).child(kids)
+            }
             Seg::Sqrt(radicand, degree) => {
                 let rad_kids = build_math_view(radicand, font_size);
                 let overline_color = color;
@@ -598,14 +654,14 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
 
 pub(crate) fn render_math_string(text: &str, font_size: f32) -> View {
     let mut chars = text.char_indices().peekable();
-    let segs = parse_math_until(&mut chars, false);
+    let segs = parse_math_until(&mut chars, false, false);
     let children = build_math_view(segs, font_size);
     FlowRow(Modifier::new().align_items(AlignItems::CENTER)).child(children)
 }
 
 pub(crate) fn render_display_math(text: &str, font_size: f32) -> View {
     let mut chars = text.char_indices().peekable();
-    let segs = parse_math_until(&mut chars, false);
+    let segs = parse_math_until(&mut chars, false, false);
     let children = build_math_view(segs, font_size);
     Row(Modifier::new().align_items(AlignItems::CENTER)).child(children)
 }
