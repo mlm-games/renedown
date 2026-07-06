@@ -602,3 +602,10 @@ pub(crate) fn render_math_string(text: &str, font_size: f32) -> View {
     let children = build_math_view(segs, font_size);
     FlowRow(Modifier::new().align_items(AlignItems::CENTER)).child(children)
 }
+
+pub(crate) fn render_display_math(text: &str, font_size: f32) -> View {
+    let mut chars = text.char_indices().peekable();
+    let segs = parse_math_until(&mut chars, false);
+    let children = build_math_view(segs, font_size);
+    Row(Modifier::new().align_items(AlignItems::CENTER)).child(children)
+}

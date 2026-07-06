@@ -1,4 +1,6 @@
-use crate::latex::render_math_string;
+use crate::latex::{render_display_math, render_math_string};
+use repose_core::scroll::ScrollBinding;
+use repose_ui::scroll::remember_horizontal_scroll_state;
 use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, LinkType, MetadataBlockKind,
     Options, Parser, Tag, TagEnd, TextMergeStream,
@@ -872,20 +874,34 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
             )
         }
 
-        Block::DisplayMath(m) => Box(Modifier::new()
-            .fill_max_width()
-            .background(theme().surface_container_high)
-            .clip_rounded(12.0)
-            .border(1.0, theme().outline_variant, 12.0)
-            .padding_values(PaddingValues {
-                left: 14.0,
-                right: 14.0,
-                top: 12.0,
-                bottom: 12.0,
-            }))
-        .child(
-            render_math_string(m.trim(), 14.0),
-        ),
+        Block::DisplayMath(m) => {
+            let scroll_state = remember_horizontal_scroll_state(
+                format!("renedown:display_math:{}", m.trim()),
+            );
+            scroll_state.set_show_scrollbar(false);
+            let h_binding = match scroll_state.to_binding() {
+                ScrollBinding::Horizontal(b) => b,
+                _ => unreachable!(),
+            };
+            Box(Modifier::new()
+                .fill_max_width()
+                .horizontal_scroll(h_binding)
+                .background(theme().surface_container_high)
+                .clip_rounded(12.0)
+                .border(1.0, theme().outline_variant, 12.0)
+                .padding_values(PaddingValues {
+                    left: 14.0,
+                    right: 14.0,
+                    top: 12.0,
+                    bottom: 12.0,
+                }))
+            .child(
+                Row(Modifier::new()
+                    .fill_max_width()
+                    .justify_content(JustifyContent::CENTER))
+                .child(render_display_math(m.trim(), 14.0)),
+            )
+        }
     }
 }
 
@@ -1337,10 +1353,15 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                         .padding_values(PaddingValues {
                             left: 5.0,
                             right: 5.0,
-                            top: 1.0,
-                            bottom: 1.0,
+                            top: 0.0,
+                            bottom: 0.0,
                         }))
-                    .child(render_math_string(m, math_size)),
+                    .child(
+                        Column(Modifier::new()
+                            .fill_max_height()
+                            .justify_content(JustifyContent::CENTER))
+                        .child(render_math_string(m, math_size)),
+                    ),
                 );
             }
 
