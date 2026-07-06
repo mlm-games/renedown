@@ -20,7 +20,7 @@ new visual line.
 
 Super ^script^ and sub ~script~ demo. Math inline: $E = mc^2$.
 
-Inline fraction test: $\frac{1}{2}$ cup of sugar and $\frac{a+b}{c+d}$ gallons of water. This text should not overlap with adjacent lines despite the tall fraction. $\frac{x^2 + y^2}{z^2 + 1}$ is the formula.
+Latex won't work yet
 
 ## Block quote
 
