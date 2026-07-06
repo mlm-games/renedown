@@ -1,11 +1,13 @@
-use crate::latex::render_math_string;
+use crate::latex::{render_display_math, render_math_string};
 use pulldown_cmark::{
     Alignment as MdAlignment, CodeBlockKind, Event, HeadingLevel, LinkType, MetadataBlockKind,
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
+use repose_core::scroll::ScrollBinding;
 use repose_core::{PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider, IconButton, IconButtonConfig};
 use repose_material::{Icon, material_symbols};
+use repose_ui::scroll::remember_horizontal_scroll_state;
 use repose_ui::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -728,49 +730,49 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                             top: 8.0,
                             bottom: 4.0,
                         }))
-                        .child((
-                            lang.as_ref().map_or(
-                                Box(Modifier::new()),
-                                |l| {
-                                    Box(Modifier::new()
-                                        .background(theme().secondary_container)
-                                        .clip_rounded(999.0)
-                                        .padding_values(PaddingValues {
-                                            left: 8.0,
-                                            right: 8.0,
-                                            top: 4.0,
-                                            bottom: 4.0,
-                                        })
-                                        .align_items(AlignItems::CENTER)
-                                        .justify_content(JustifyContent::CENTER))
-                                    .child(
-                                        Text(l.clone())
-                                            .font_family("monospace")
-                                            .size(11.0)
-                                            .color(theme().on_secondary_container),
-                                    )
+                    .child((
+                        lang.as_ref().map_or(Box(Modifier::new()), |l| {
+                            Box(Modifier::new()
+                                .background(theme().secondary_container)
+                                .clip_rounded(999.0)
+                                .padding_values(PaddingValues {
+                                    left: 8.0,
+                                    right: 8.0,
+                                    top: 4.0,
+                                    bottom: 4.0,
+                                })
+                                .align_items(AlignItems::CENTER)
+                                .justify_content(JustifyContent::CENTER))
+                            .child(
+                                Text(l.clone())
+                                    .font_family("monospace")
+                                    .size(11.0)
+                                    .color(theme().on_secondary_container),
+                            )
+                        }),
+                        Spacer(),
+                        IconButton(
+                            Icon(Symbols::CONTENT_COPY)
+                                .size(18.0)
+                                .color(theme().on_surface.with_alpha_f32(0.6)),
+                            {
+                                let code_copy = code_text.clone();
+                                move || copy_to_clipboard(&code_copy)
+                            },
+                            IconButtonConfig {
+                                container_size: Some(32.0),
+                                colors: repose_material::material3::IconButtonColors {
+                                    container_color: Color::TRANSPARENT,
+                                    content_color: theme().on_surface.with_alpha_f32(0.6),
+                                    disabled_container_color: Color::TRANSPARENT,
+                                    disabled_content_color: theme().on_surface.with_alpha_f32(0.38),
                                 },
-                            ),
-                            Spacer(),
-                            IconButton(
-                                Icon(Symbols::CONTENT_COPY).size(18.0).color(theme().on_surface.with_alpha_f32(0.6)),
-                                {
-                                    let code_copy = code_text.clone();
-                                    move || copy_to_clipboard(&code_copy)
-                                },
-                                IconButtonConfig {
-                                    container_size: Some(32.0),
-                                    colors: repose_material::material3::IconButtonColors {
-                                        container_color: Color::TRANSPARENT,
-                                        content_color: theme().on_surface.with_alpha_f32(0.6),
-                                        disabled_container_color: Color::TRANSPARENT,
-                                        disabled_content_color: theme().on_surface.with_alpha_f32(0.38),
-                                    },
-                                    ..Default::default()
-                                },
-                            ),
-                        )),
-                    Box(Modifier::new().padding(14.0)).child(highlight_code(&code_text, lang.as_deref())),
+                                ..Default::default()
+                            },
+                        ),
+                    )),
+                    Box(Modifier::new().padding(14.0))
+                        .child(highlight_code(&code_text, lang.as_deref())),
                 )),
             )
         }
@@ -872,20 +874,33 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
             )
         }
 
-        Block::DisplayMath(m) => Box(Modifier::new()
-            .fill_max_width()
-            .background(theme().surface_container_high)
-            .clip_rounded(12.0)
-            .border(1.0, theme().outline_variant, 12.0)
-            .padding_values(PaddingValues {
-                left: 14.0,
-                right: 14.0,
-                top: 12.0,
-                bottom: 12.0,
-            }))
-        .child(
-            render_math_string(m.trim(), 14.0),
-        ),
+        Block::DisplayMath(m) => {
+            let scroll_state =
+                remember_horizontal_scroll_state(format!("renedown:display_math:{}", m.trim()));
+            scroll_state.set_show_scrollbar(false);
+            let h_binding = match scroll_state.to_binding() {
+                ScrollBinding::Horizontal(b) => b,
+                _ => unreachable!(),
+            };
+            Box(Modifier::new()
+                .fill_max_width()
+                .horizontal_scroll(h_binding)
+                .background(theme().surface_container_high)
+                .clip_rounded(12.0)
+                .border(1.0, theme().outline_variant, 12.0)
+                .padding_values(PaddingValues {
+                    left: 14.0,
+                    right: 14.0,
+                    top: 12.0,
+                    bottom: 12.0,
+                }))
+            .child(
+                Row(Modifier::new()
+                    .fill_max_width()
+                    .justify_content(JustifyContent::CENTER))
+                .child(render_display_math(m.trim(), 14.0)),
+            )
+        }
     }
 }
 
@@ -1337,10 +1352,17 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                         .padding_values(PaddingValues {
                             left: 5.0,
                             right: 5.0,
-                            top: 1.0,
-                            bottom: 1.0,
+                            top: 0.0,
+                            bottom: 0.0,
                         }))
-                    .child(render_math_string(m, math_size)),
+                    .child(
+                        Column(
+                            Modifier::new()
+                                .fill_max_height()
+                                .justify_content(JustifyContent::CENTER),
+                        )
+                        .child(render_math_string(m, math_size)),
+                    ),
                 );
             }
 
@@ -1612,8 +1634,6 @@ fn highlight_code(code: &str, lang: Option<&str>) -> View {
         .font_family("monospace")
         .size(15.0)
 }
-
-
 
 #[cfg(test)]
 mod tests {
