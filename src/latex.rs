@@ -1,4 +1,4 @@
-use repose_core::prelude::*;
+use repose_core::{prelude::*, PaddingValues};
 use repose_ui::*;
 
 fn latex_cmd_to_unicode(cmd: &str) -> Option<&'static str> {
@@ -345,7 +345,17 @@ fn skip_ws(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>) {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MatrixEnv {
+    Pmatrix,
+    Bmatrix,
+    Vmatrix,
+    Matrix,
+    Cases,
+    Aligned,
+}
+
+#[derive(Debug, Clone)]
 enum Seg {
     Text(String),
     Sup(Vec<Seg>),
@@ -355,6 +365,88 @@ enum Seg {
     Binom(Vec<Seg>, Vec<Seg>),
     Font(Vec<Seg>),
     Accent(&'static str, Vec<Seg>),
+    Matrix { env: MatrixEnv, rows: Vec<Vec<Vec<Seg>>> },
+}
+
+/// Dispatch a known command (already read) and produce its segment(s).
+fn parse_cmd_segments(
+    cmd: &str,
+    chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>,
+) -> Vec<Seg> {
+    if cmd.is_empty() {
+        return vec![];
+    }
+    if latex_is_ignorable(&cmd) {
+        return vec![];
+    }
+    if latex_is_function_name(&cmd) {
+        return vec![Seg::Text(cmd.to_string())];
+    }
+    if let Some(unicode) = latex_cmd_to_unicode(cmd) {
+        return vec![Seg::Text(unicode.to_string())];
+    }
+    if cmd == "over" {
+        // \over is special — it operates on the preceding segs.
+        // Return a sentinel — caller must handle it.
+        return vec![];
+    }
+    let result: Vec<Seg> = match cmd {
+        "frac" => {
+            vec![Seg::Frac(parse_math_group(chars), parse_math_group(chars))]
+        }
+        "sqrt" => {
+            skip_ws(chars);
+            let degree = if chars.peek().is_some_and(|(_, p)| *p == '[') {
+                chars.next();
+                let inner = parse_math_until(chars, false, true);
+                let _close = chars.next();
+                Some(inner)
+            } else {
+                None
+            };
+            vec![Seg::Sqrt(parse_math_group(chars), degree)]
+        }
+        "binom" => {
+            vec![Seg::Binom(parse_math_group(chars), parse_math_group(chars))]
+        }
+        "mathbb" | "mathcal" | "mathrm" | "mathbf" | "mathit" | "mathsf" | "mathtt" | "mathscr" | "mathfrak" => {
+            vec![Seg::Font(parse_math_group(chars))]
+        }
+        "hat" | "bar" | "dot" | "vec" | "tilde" => {
+            let combining = match cmd {
+                "hat" => "\u{0302}",
+                "bar" => "\u{0304}",
+                "dot" => "\u{0307}",
+                "vec" => "\u{20D7}",
+                "tilde" => "\u{0303}",
+                _ => unreachable!(),
+            };
+            vec![Seg::Accent(combining, parse_math_group(chars))]
+        }
+        "begin" => {
+            let env_name = parse_braced_text(chars);
+            if let Some(env) = match env_name.as_str() {
+                "pmatrix" => Some(MatrixEnv::Pmatrix),
+                "bmatrix" => Some(MatrixEnv::Bmatrix),
+                "vmatrix" => Some(MatrixEnv::Vmatrix),
+                "matrix" => Some(MatrixEnv::Matrix),
+                "cases" => Some(MatrixEnv::Cases),
+                "aligned" => Some(MatrixEnv::Aligned),
+                _ => None,
+            } {
+                vec![Seg::Matrix { env, rows: parse_matrix_until(chars, &env_name) }]
+            } else {
+                vec![]
+            }
+        }
+        "text" => {
+            vec![Seg::Text(parse_braced_text(chars))]
+        }
+        _ => {
+            vec![Seg::Text(format!("\\{}", cmd))]
+        }
+    };
+    result
 }
 
 fn parse_math_until(
@@ -379,17 +471,6 @@ fn parse_math_until(
                 if cmd.is_empty() {
                     continue;
                 }
-                if latex_is_ignorable(&cmd) {
-                    continue;
-                }
-                if latex_is_function_name(&cmd) {
-                    buf.push_str(&cmd);
-                    continue;
-                }
-                if let Some(unicode) = latex_cmd_to_unicode(&cmd) {
-                    buf.push_str(unicode);
-                    continue;
-                }
                 if cmd == "over" {
                     flush(&mut buf, &mut segs);
                     let num = std::mem::take(&mut segs);
@@ -397,59 +478,14 @@ fn parse_math_until(
                     segs = vec![Seg::Frac(num, den)];
                     break;
                 }
-                match cmd.as_str() {
-                    "frac" => {
-                        flush(&mut buf, &mut segs);
-                        let num = parse_math_group(chars);
-                        let den = parse_math_group(chars);
-                        segs.push(Seg::Frac(num, den));
-                    }
-                    "sqrt" => {
-                        flush(&mut buf, &mut segs);
-                        skip_ws(chars);
-                        let degree = if chars.peek().is_some_and(|(_, p)| *p == '[') {
-                            chars.next();
-                            let inner = parse_math_until(chars, false, true);
-                            let _close = chars.next();
-                            Some(inner)
-                        } else {
-                            None
-                        };
-                        let radicand = parse_math_group(chars);
-                        segs.push(Seg::Sqrt(radicand, degree));
-                    }
-                    "binom" => {
-                        flush(&mut buf, &mut segs);
-                        let top = parse_math_group(chars);
-                        let bot = parse_math_group(chars);
-                        segs.push(Seg::Binom(top, bot));
-                    }
-                    "mathbb" | "mathcal" | "mathrm" | "mathbf" | "mathit" | "mathsf" | "mathtt" | "mathscr" | "mathfrak" => {
-                        flush(&mut buf, &mut segs);
-                        let inner = parse_math_group(chars);
-                        segs.push(Seg::Font(inner));
-                    }
-                    "hat" | "bar" | "dot" | "vec" | "tilde" => {
-                        flush(&mut buf, &mut segs);
-                        let combining = match cmd.as_str() {
-                            "hat" => "\u{0302}",
-                            "bar" => "\u{0304}",
-                            "dot" => "\u{0307}",
-                            "vec" => "\u{20D7}",
-                            "tilde" => "\u{0303}",
-                            _ => unreachable!(),
-                        };
-                        let inner = parse_math_group(chars);
-                        segs.push(Seg::Accent(combining, inner));
-                    }
-                    "text" => {
-                        flush(&mut buf, &mut segs);
-                        let inner = parse_braced_text(chars);
-                        buf.push_str(&inner);
-                    }
-                    _ => {
-                        buf.push('\\');
-                        buf.push_str(&cmd);
+                let cmd_segs = parse_cmd_segments(&cmd, chars);
+                for s in cmd_segs {
+                    match s {
+                        Seg::Text(t) => buf.push_str(&t),
+                        other => {
+                            flush(&mut buf, &mut segs);
+                            segs.push(other);
+                        }
                     }
                 }
             }
@@ -508,11 +544,20 @@ fn parse_math_group(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>) 
 }
 
 fn parse_super_sub_group(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>) -> Vec<Seg> {
+    skip_ws(chars);
     if chars.peek().is_some_and(|(_, p)| *p == '{') {
         chars.next();
         let inner = parse_math_until(chars, true, false);
         chars.next();
         inner
+    } else if chars.peek().is_some_and(|(_, p)| *p == '\\') {
+        chars.next();
+        let cmd = read_alpha_name(chars);
+        if cmd.is_empty() {
+            vec![Seg::Text("\\".to_string())]
+        } else {
+            parse_cmd_segments(&cmd, chars)
+        }
     } else if let Some((_, c)) = chars.next() {
         vec![Seg::Text(c.to_string())]
     } else {
@@ -546,6 +591,87 @@ fn parse_braced_text(chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>)
     } else {
         String::new()
     }
+}
+
+fn parse_matrix_until(
+    chars: &mut std::iter::Peekable<std::str::CharIndices<'_>>,
+    env_name: &str,
+) -> Vec<Vec<Vec<Seg>>> {
+    let mut rows: Vec<Vec<String>> = vec![vec![String::new()]];
+    let mut depth = 0u32;
+
+    while let Some(&(_, c)) = chars.peek() {
+        match c {
+            '{' => {
+                depth += 1;
+                let cur = rows.last_mut().unwrap().last_mut().unwrap();
+                cur.push('{');
+                chars.next();
+            }
+            '}' => {
+                if depth == 0 {
+                    break;
+                }
+                depth -= 1;
+                let cur = rows.last_mut().unwrap().last_mut().unwrap();
+                cur.push('}');
+                chars.next();
+            }
+            '&' if depth == 0 => {
+                chars.next();
+                rows.last_mut().unwrap().push(String::new());
+            }
+            '\\' if depth == 0 => {
+                chars.next();
+                if chars.peek().is_some_and(|(_, p)| *p == '\\') {
+                    chars.next();
+                    if chars.peek().is_some_and(|(_, p)| *p == '[') {
+                        while let Some(&(_, p)) = chars.peek() {
+                            if p == ']' { chars.next(); break; }
+                            chars.next();
+                        }
+                    }
+                    rows.push(vec![String::new()]);
+                } else {
+                    let cmd = read_alpha_name(chars);
+                    if cmd == "end" {
+                        let end_name = parse_braced_text(chars);
+                        if end_name == env_name {
+                            break;
+                        } else if !end_name.is_empty() {
+                            let cur = rows.last_mut().unwrap().last_mut().unwrap();
+                            cur.push_str("\\end{");
+                            cur.push_str(&end_name);
+                            cur.push('}');
+                        }
+                    } else if !cmd.is_empty() {
+                        let cur = rows.last_mut().unwrap().last_mut().unwrap();
+                        cur.push('\\');
+                        cur.push_str(&cmd);
+                    }
+                }
+            }
+            ' ' | '\t' | '\n' | '\r' if depth == 0 => {
+                chars.next();
+            }
+            _ => {
+                let cur = rows.last_mut().unwrap().last_mut().unwrap();
+                cur.push(c);
+                chars.next();
+            }
+        }
+    }
+
+    if rows.last().map_or(false, |r| r.len() == 1 && r[0].is_empty()) {
+        rows.pop();
+    }
+
+    rows.into_iter().map(|row| {
+        row.into_iter().map(|cell| {
+            let mut cell_chars = cell.char_indices().peekable();
+            parse_math_until(&mut cell_chars, false, false)
+        }).collect()
+    }).collect()
 }
 
 fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
@@ -612,6 +738,44 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
                 );
                 FlowRow(Modifier::new()).child(kids)
             }
+            Seg::Matrix { ref env, ref rows } => {
+                let (left_delim, right_delim) = match env {
+                    MatrixEnv::Pmatrix => ("(", ")"),
+                    MatrixEnv::Bmatrix => ("[", "]"),
+                    MatrixEnv::Vmatrix => ("|", "|"),
+                    MatrixEnv::Matrix => ("", ""),
+                    MatrixEnv::Cases => ("", ""),
+                    MatrixEnv::Aligned => ("", ""),
+                };
+                let row_views: Vec<View> = rows.iter().map(|row| {
+                    let cell_views: Vec<View> = row.iter().map(|cell| {
+                        let kids = build_math_view(cell.clone(), font_size);
+                        Box(Modifier::new().padding_values(PaddingValues {
+                            left: 3.0, right: 3.0, top: 1.0, bottom: 1.0,
+                        })).child(FlowRow(Modifier::new()).child(kids))
+                    }).collect();
+                    Row(Modifier::new()).child(cell_views)
+                }).collect();
+
+                let grid = Column(Modifier::new().align_items(AlignItems::CENTER)).child(
+                    intersperse_vertical(row_views, 2.0)
+                );
+
+                if *env == MatrixEnv::Cases {
+                    Row(Modifier::new().align_items(AlignItems::CENTER)).child((
+                        Text("\u{007B}").font_family("monospace").size(font_size * 1.5).color(color),
+                        grid,
+                    ))
+                } else if !left_delim.is_empty() {
+                    Row(Modifier::new().align_items(AlignItems::CENTER)).child((
+                        Text(left_delim).font_family("monospace").size(font_size * 1.2).color(color),
+                        grid,
+                        Text(right_delim).font_family("monospace").size(font_size * 1.2).color(color),
+                    ))
+                } else {
+                    grid
+                }
+            }
             Seg::Sqrt(radicand, degree) => {
                 let rad_kids = build_math_view(radicand, font_size);
                 let overline_color = color;
@@ -650,6 +814,17 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
             }
         })
         .collect()
+}
+
+fn intersperse_vertical(children: Vec<View>, gap: f32) -> Vec<View> {
+    let mut result = Vec::with_capacity(children.len() * 2 - 1);
+    for (i, child) in children.into_iter().enumerate() {
+        if i > 0 {
+            result.push(Box(Modifier::new().height(gap).width(1.0)));
+        }
+        result.push(child);
+    }
+    result
 }
 
 pub(crate) fn render_math_string(text: &str, font_size: f32) -> View {
