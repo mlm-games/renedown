@@ -887,6 +887,7 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                 .horizontal_scroll(h_binding)
                 .background(theme().surface_container_high)
                 .clip_rounded(12.0)
+                .overflow(repose_core::Overflow::Visible)
                 .border(1.0, theme().outline_variant, 12.0)
                 .padding_values(PaddingValues {
                     left: 14.0,
@@ -1349,6 +1350,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                     Box(Modifier::new()
                         .background(theme().surface_container_high)
                         .clip_rounded(6.0)
+                        .overflow(repose_core::Overflow::Visible)
                         .padding_values(PaddingValues {
                             left: 5.0,
                             right: 5.0,

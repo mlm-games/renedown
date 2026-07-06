@@ -690,13 +690,17 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
                 .into(),
             Seg::Sup(children) => {
                 let kids = build_math_view(children, sup_size);
-                Box(Modifier::new().translate(0.0, sup_offset))
-                    .child(FlowRow(Modifier::new()).child(kids))
+                Column(Modifier::new()).child((
+                    FlowRow(Modifier::new()).child(kids),
+                    Box(Modifier::new().height(-sup_offset).width(1.0)),
+                ))
             }
             Seg::Sub(children) => {
                 let kids = build_math_view(children, sub_size);
-                Box(Modifier::new().translate(0.0, sub_offset))
-                    .child(FlowRow(Modifier::new()).child(kids))
+                Column(Modifier::new()).child((
+                    Box(Modifier::new().height(sub_offset).width(1.0)),
+                    FlowRow(Modifier::new()).child(kids),
+                ))
             }
             Seg::Frac(num, den) => {
                 let num_kids = build_math_view(num, font_size);
@@ -831,7 +835,7 @@ pub(crate) fn render_math_string(text: &str, font_size: f32) -> View {
     let mut chars = text.char_indices().peekable();
     let segs = parse_math_until(&mut chars, false, false);
     let children = build_math_view(segs, font_size);
-    FlowRow(Modifier::new().align_items(AlignItems::CENTER)).child(children)
+    FlowRow(Modifier::new().align_items(AlignItems::FLEX_START)).child(children)
 }
 
 pub(crate) fn render_display_math(text: &str, font_size: f32) -> View {
