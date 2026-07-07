@@ -756,9 +756,9 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
                         let kids = build_math_view(cell.clone(), font_size);
                         Box(Modifier::new().padding_values(PaddingValues {
                             left: 3.0, right: 3.0, top: 1.0, bottom: 1.0,
-                        })).child(FlowRow(Modifier::new()).child(kids))
+                        })).child(Row(Modifier::new().align_items(AlignItems::FLEX_START)).child(kids))
                     }).collect();
-                    Row(Modifier::new()).child(cell_views)
+                    Row(Modifier::new().align_items(AlignItems::FLEX_START)).child(cell_views)
                 }).collect();
 
                 let grid = Column(Modifier::new().align_items(AlignItems::CENTER)).child(
