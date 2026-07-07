@@ -500,11 +500,11 @@ dependencies = [
 
 [[package]]
 name = "bit-set"
-version = "0.10.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b0f1f60a6be1155c81f2f9fca48157aa87ecb61361d71b0be6e83c8d34f5527"
+checksum = "09ec2f926cc3060f09db9ebc5b52823d85268d24bb917e472c0c4bea35780a7d"
 dependencies = [
- "bit-vec 0.10.0",
+ "bit-vec 0.9.1",
 ]
 
 [[package]]
@@ -518,12 +518,6 @@ name = "bit-vec"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b71798fca2c1fe1086445a7258a4bc81e6e49dcd24c8d0dd9a1e57395b603f51"
-
-[[package]]
-name = "bit-vec"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27072b69db792194938b8a1ae8f1e4a003ba53437a719cf6ddc21f32229f0586"
 
 [[package]]
 name = "bitflags"
@@ -634,9 +628,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.65"
+version = "1.2.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e228eec9be7c17ccb640b59b36a5cd805ea2a564a4c5e162c2f659fea30d3b96"
+checksum = "f5d6cac793997bd970000024b2934968efe83b382de4fdcf4fcb46b6ee4ad996"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -803,9 +797,9 @@ dependencies = [
 
 [[package]]
 name = "crossbeam-utils"
-version = "0.8.21"
+version = "0.8.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
+checksum = "61803da095bee82a81bb1a452ecc25d3b2f1416d1897eb86430c6159ef717c17"
 
 [[package]]
 name = "crunchy"
@@ -1093,9 +1087,9 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "font-awl"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ea2dae73d511fc0044b0db1d10a559c30bff86ced0978e704bb10638dfa8e02"
+checksum = "9dd2fb0119ea2fceb3fe059e20cbfdf5cc33ba3bb0c5ec826618a6f9451a8bba"
 dependencies = [
  "cfg-if",
  "fontique",
@@ -1669,11 +1663,11 @@ dependencies = [
 
 [[package]]
 name = "jobserver"
-version = "0.1.34"
+version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9afb3de4395d6b3e67a780b6de64b51c978ecf11cb9a462c66be7d4ca9039d33"
+checksum = "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
 dependencies = [
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "libc",
 ]
 
@@ -1873,7 +1867,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23bf0a141a9ab6f07dbb492db53245e464bc9db42f407772d9ae03d83a2c1033"
 dependencies = [
  "arrayvec",
- "bit-set 0.10.1",
+ "bit-set 0.10.0",
  "bitflags 2.13.0",
  "cfg-if",
  "cfg_aliases",
@@ -2635,9 +2629,9 @@ checksum = "007d8adb5ddab6f8e3f491ac63566a7d5002cc7ed73901f72057943fa71ae1ae"
 
 [[package]]
 name = "pxfm"
-version = "0.1.29"
+version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0c5ccf5294c6ccd63a74f1565028353830a9c2f5eb0c682c355c471726a6e3f"
+checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
 
 [[package]]
 name = "quick-xml"
@@ -2840,9 +2834,9 @@ dependencies = [
 
 [[package]]
 name = "repose-core"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c739ba5a153810ab4df66dd95526903ef405893aa3f2663c09ac1443a1c2ca81"
+checksum = "53176bbbc721e8e799a49babcfaf559bafb1bacecbba59f476cef37359e8debb"
 dependencies = [
  "bitflags 2.13.0",
  "log",
@@ -2858,9 +2852,9 @@ dependencies = [
 
 [[package]]
 name = "repose-devtools"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d10a6afc97177a6d31f9f977ca7c39ecbc3736dbc9cb41b90ed3a9943a6e8701"
+checksum = "aad77f5c50bdd859f5615b20d86bbb3ab52e5c632128bf7d2f63ff75edc53c4e"
 dependencies = [
  "log",
  "repose-core",
@@ -2869,9 +2863,9 @@ dependencies = [
 
 [[package]]
 name = "repose-macros"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db3acfcc0214ae9750862d558fd86763e11318ac1732721e1041057fe50cf3f2"
+checksum = "a06265ef5d8c16176a869dac65714fac560173bb8f3674ccbfe1b9dd42728cfd"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2880,9 +2874,9 @@ dependencies = [
 
 [[package]]
 name = "repose-material"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6febe415887723dbe524972c000f17441d6d7586bb84f9daf652d01a4bbb3124"
+checksum = "a6fb155e6dcb5ab1a433b4328ba4124469dea279f46edcb9158270cd03995995"
 dependencies = [
  "repose-core",
  "repose-text",
@@ -2892,9 +2886,9 @@ dependencies = [
 
 [[package]]
 name = "repose-navigation"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3eb6bfee83f9c032c55643ec83379b09874fd659d56002893379cec408a6b23"
+checksum = "5c8360a6794a9d3bf8282158802fa19b232226f5de7e68ac9ecfa6adb646eb7b"
 dependencies = [
  "log",
  "repose-core",
@@ -2905,9 +2899,9 @@ dependencies = [
 
 [[package]]
 name = "repose-platform"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed901eacc078133c33d8c3c3408a40aee5bc6036550e2267271f888c5e3d8d46"
+checksum = "c7dc2e394c5f239dcc142c5353dedc74bf870c746afd0fba2514bbfbe14f57f0"
 dependencies = [
  "accesskit",
  "accesskit_winit",
@@ -2934,9 +2928,9 @@ dependencies = [
 
 [[package]]
 name = "repose-render-wgpu"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd9c8f50a0eb8515fa3c0a9b0ac5fb4e7341f06cfd250ed0274c93a09e345174"
+checksum = "4926193e7833d8b0ff39ba60c842d67dc18a1af502291208d58bbd1755c2ebe1"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -2953,9 +2947,9 @@ dependencies = [
 
 [[package]]
 name = "repose-text"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3334cf403cecc2b61d75f0a72d892eef66b8a0e73cebf16ba3a3c2ce59a107a"
+checksum = "d3665280744456dde8760a88193bb8ebcee860091b43835038939dc477f3bba8"
 dependencies = [
  "font-awl",
  "log",
@@ -2969,9 +2963,9 @@ dependencies = [
 
 [[package]]
 name = "repose-tree"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff04ecebd2e695469c9473ac1f3b4ab34df34bc75a56cf6b11b47e7d79a02321"
+checksum = "3ec0a824c1becc93b4110ff2ed61c9460973ec4c468bd9318b38ca050697cfb3"
 dependencies = [
  "log",
  "rapidhash",
@@ -2983,9 +2977,9 @@ dependencies = [
 
 [[package]]
 name = "repose-ui"
-version = "0.22.3"
+version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a34219c489af0e603511b022a7ab605a354d4c26fd5a175458b8096e6f64ad1"
+checksum = "08163d4ebe0b140d097a08d075ac18aeafdcc03ac30142cc04abf00a2a7ebd6d"
 dependencies = [
  "log",
  "repose-core",
@@ -3057,9 +3051,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.22"
+version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
+checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "same-file"
@@ -3936,7 +3930,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08763620e76fc980bca7bf84de82568614487a53172dd968d89187282eb87fa2"
 dependencies = [
  "arrayvec",
- "bit-set 0.10.1",
+ "bit-set 0.10.0",
  "bit-vec 0.9.1",
  "bitflags 2.13.0",
  "bytemuck",
@@ -4009,7 +4003,7 @@ dependencies = [
  "android_system_properties",
  "arrayvec",
  "ash",
- "bit-set 0.10.1",
+ "bit-set 0.10.0",
  "bitflags 2.13.0",
  "block2 0.6.2",
  "bytemuck",
@@ -4601,18 +4595,18 @@ checksum = "6df3dc4292935e51816d896edcd52aa30bc297907c26167fec31e2b0c6a32524"
 
 [[package]]
 name = "zerocopy"
-version = "0.8.52"
+version = "0.8.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce1022995ff5ff5d841ad7d994facc23098cd40152f2c1d11cd607c6f530653f"
+checksum = "75726053136156d419e285b9b7eddaaea9e3fea6ce32eed44a89901f0bd98de1"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.52"
+version = "0.8.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ae7f38b72ec2a254e2b87ef277cf2cd4fb97cbebf944faa6f33354da0867930"
+checksum = "4714fd92cf900833d49538023a9b3915155210801d1c1169eba513b2addefd71"
 dependencies = [
  "proc-macro2",
  "quote",
