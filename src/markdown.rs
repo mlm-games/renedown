@@ -1160,6 +1160,7 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                     text,
                     spans: s.into(),
                 })
+                .font_family("sans-serif")
                 .size(base.size)
                 .color(base.color),
             );
