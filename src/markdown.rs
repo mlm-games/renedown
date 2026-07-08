@@ -4,7 +4,7 @@ use pulldown_cmark::{
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
 use repose_core::scroll::ScrollBinding;
-use repose_core::{PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
+use repose_core::{FontStyle, FontWeight, PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider, IconButton, IconButtonConfig};
 use repose_material::{Icon, material_symbols};
 use repose_ui::scroll::remember_horizontal_scroll_state;
@@ -1184,18 +1184,13 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
 
             Inline::Strong(children) => {
                 let start = text_buf.len();
-                let child_style = InlineStyle {
-                    size: base.size + 0.5,
-                    color: theme().on_surface,
-                };
-                accumulate_text_inlines(children, child_style, &mut text_buf, &mut spans, &on_link);
+                accumulate_text_inlines(children, base, &mut text_buf, &mut spans, &on_link);
                 if text_buf.len() > start {
                     spans.push(TextSpan {
                         start,
                         end: text_buf.len(),
                         style: SpanStyle {
-                            font_size: Some(child_style.size),
-                            color: Some(child_style.color),
+                            font_weight: Some(FontWeight::BOLD.0),
                             ..SpanStyle::default()
                         },
                         url: None,
@@ -1210,7 +1205,10 @@ fn render_inlines(inlines: &[Inline], base: InlineStyle, on_link: Rc<dyn Fn(Stri
                     spans.push(TextSpan {
                         start,
                         end: text_buf.len(),
-                        style: SpanStyle::default(),
+                        style: SpanStyle {
+                            font_style: Some(1),
+                            ..SpanStyle::default()
+                        },
                         url: None,
                     });
                 }

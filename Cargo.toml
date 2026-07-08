@@ -34,10 +34,7 @@ repose-ui = "0.22"
 repose-material = "0.22"
 repose-platform = "0.22"
 repose-render-wgpu = "0.22"
-repose-text = { version = "0.22", default-features = false, features = [
-    "basic",
-    "monospace",
-] }
+repose-text = { version = "0.22", default-features = false }
 # repose-core = { path = "../repose/crates/repose-core" }
 # repose-ui = { path = "../repose/crates/repose-ui" }
 # repose-material = { path = "../repose/crates/repose-material" }
