@@ -88,7 +88,7 @@ pub fn spawn_save_file(
     #[cfg(not(target_arch = "wasm32"))]
     std::thread::spawn(move || {
         let result = (|| -> Result<(), String> {
-            let file = futures_lite::future::block_on(RlobKit::open_file_saver(
+            futures_lite::future::block_on(RlobKit::save_bytes(
                 SaveFileOptions {
                     suggested_name: Some(suggested),
                     extension: Some(ext),
@@ -99,10 +99,10 @@ pub fn spawn_save_file(
                     title: Some(title),
                     ..Default::default()
                 },
+                &content,
             ))
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Save cancelled".to_string())?;
-            file.write_bytes(&content).map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+            Ok(())
         })();
         let _ = tx.send(result);
     });
@@ -110,20 +110,22 @@ pub fn spawn_save_file(
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_futures::spawn_local(async move {
         let result = (|| async {
-            let file = RlobKit::open_file_saver(SaveFileOptions {
-                suggested_name: Some(suggested),
-                extension: Some(ext),
-                file_type: Some(RlobKitType::Custom {
-                    extensions: vec![],
-                    mime_types: vec![],
-                }),
-                title: Some(title),
-                ..Default::default()
-            })
+            RlobKit::save_bytes(
+                SaveFileOptions {
+                    suggested_name: Some(suggested),
+                    extension: Some(ext),
+                    file_type: Some(RlobKitType::Custom {
+                        extensions: vec![],
+                        mime_types: vec![],
+                    }),
+                    title: Some(title),
+                    ..Default::default()
+                },
+                &content,
+            )
             .await
-            .map_err(|e| e.to_string())?
-            .ok_or_else(|| "Save cancelled".to_string())?;
-            file.write_bytes(&content).map_err(|e| e.to_string())
+            .map_err(|e| e.to_string())?;
+            Ok(())
         })()
         .await;
         let _ = tx.send(result);
