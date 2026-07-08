@@ -9,13 +9,11 @@ default-run = "renedown-desktop"
 name = "renedown"
 crate-type = ["cdylib", "rlib"]
 
-[features]
-desktop-bin = []
+
 
 [[bin]]
 name = "renedown-desktop"
 path = "src/main.rs"
-required-features = ["desktop-bin"]
 
 [package.metadata.android]
 package = "org.mlm.renedown"
