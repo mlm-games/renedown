@@ -3186,7 +3186,9 @@ dependencies = [
 
 [[package]]
 name = "rlobkit-core"
-version = "0.2.3"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "657a7055b91a513e9a741461758a09fb980defcef1eba0f01a52107c68d0f8a5"
 dependencies = [
  "bytes",
  "dirs",
@@ -3197,7 +3199,9 @@ dependencies = [
 
 [[package]]
 name = "rlobkit-dialogs"
-version = "0.2.3"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3311cf22a56a3b10f25ed26c6649d01bc1329d7a9b64073fb3144c91bfba720e"
 dependencies = [
  "bytes",
  "futures-lite",

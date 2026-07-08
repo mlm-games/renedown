@@ -50,7 +50,7 @@ anyhow = "1"
 log = "0.4"
 syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
 
-rlobkit-dialogs = { path = "../rlobkit/rlobkit-dialogs" }
+rlobkit-dialogs = "0.3"
 flume = "0.12"
 futures-lite = "2"
 
