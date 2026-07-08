@@ -1,0 +1,52 @@
+- missed
+- test
+- use arm builds for ci
+- missed exception import
+- add intent handling
+- add favicon
+- add all the structurral packaging stuff
+- save init icon
+- register bold and italic fonts
+- add ymls
+- do not show the text on topbar on android
+- bump to rlobkit 0.4
+- use the OutlinedButton for clear
+- bump ver for rlobkit
+- add text for clear button
+- replace buttons with iconbuttons
+- use save_bytes instead of local blob save (for wasm save interop)
+- add initial file handling
+- update to 0.22.4
+- workaround to remove when wasm-opt auto-detects
+- fix the aligned equation, and bumpt to 0.22
+- reduce clipping for physics subscipts and lower limits
+- matrix and few other issues
+- fix nested sq roots
+- add horizontal scrolling for long math fns
+- add horizontal scrolling for long math fns
+- update lock
+- bump to 0.22 for wasm and android font loading
+- update for few more missing symbols
+- remove the f prefix for latex eqs
+- implement latex support (inline extend, seperate mdoule
+- bump repose to 0.21.5
+- center the code-lang block header's text
+- change the button to icon button
+- syntax highlighting for code
+- copy button
+- do not shrink text size for code blocks
+- remove color divergence, compared to other md renderers
+- Revert "use span styling to test BaselineShift's styling" (shorter in code)
+- use span styling to test BaselineShift's styling
+- fix the table's elements not having equal gaps
+- url handling
+- parity and fix few issues
+- intermediate 3 (works but eh...)
+- intermediate 2 (broken)
+- intermediate state
+- prev.
+- fix yml (try wrap main, for cargo run default)
+- bump ver (for ?)
+- add the actual versions and pages.yml
+- dups reduct
+- first commit
