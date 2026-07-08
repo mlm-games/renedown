@@ -3,8 +3,15 @@ use crate::markdown::MarkdownDocument;
 use repose_core::scroll::ScrollBinding;
 use repose_core::{PaddingValues, prelude::*, set_theme_default, signal};
 use repose_material::material3::*;
+use repose_material::{Icon, material_symbols};
 use repose_ui::scroll::remember_scroll_state;
 use repose_ui::*;
+
+material_symbols! {
+    FOLDER_OPEN : '\u{E2C8}',
+    SAVE        : '\u{E161}',
+    CLOSE       : '\u{E5CD}',
+}
 use std::rc::Rc;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -189,25 +196,20 @@ fn top_bar(
         actions.push(hspace(8.0));
     }
 
-    actions.push(TextButton(
-        Modifier::new(),
+    actions.push(IconButton(
+        Icon(Symbols::FOLDER_OPEN).size(20.0),
         on_open,
-        ButtonConfig::default(),
-        || Text("Open").size(14.0),
+        IconButtonConfig::default(),
     ));
-    actions.push(hspace(4.0));
-    actions.push(TextButton(
-        Modifier::new(),
+    actions.push(IconButton(
+        Icon(Symbols::SAVE).size(20.0),
         on_save,
-        ButtonConfig::default(),
-        || Text("Save").size(14.0),
+        IconButtonConfig::default(),
     ));
-    actions.push(hspace(4.0));
-    actions.push(TextButton(
-        Modifier::new(),
+    actions.push(IconButton(
+        Icon(Symbols::CLOSE).size(20.0),
         on_clear,
-        ButtonConfig::default(),
-        || Text("Clear").size(14.0),
+        IconButtonConfig::default(),
     ));
 
     Column(Modifier::new().fill_max_width().background(theme().surface)).child((
