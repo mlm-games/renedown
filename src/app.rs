@@ -206,10 +206,19 @@ fn top_bar(
         on_save,
         IconButtonConfig::default(),
     ));
-    actions.push(IconButton(
-        Icon(Symbols::CLOSE).size(20.0),
+    actions.push(TextButton(
+        Modifier::new(),
         on_clear,
-        IconButtonConfig::default(),
+        ButtonConfig::default(),
+        || {
+            Row(Modifier::new()
+                .align_items(AlignItems::CENTER)
+                .column_gap(4.0))
+            .child((
+                Icon(Symbols::CLOSE).size(18.0),
+                Text("Clear").size(14.0),
+            ))
+        },
     ));
 
     Column(Modifier::new().fill_max_width().background(theme().surface)).child((
