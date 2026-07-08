@@ -1,0 +1,11 @@
+Renedown is a cross-platform Markdown viewer and editor built as a reference example for the Repose GUI framework. It demonstrates how to build a full-featured desktop application with GPU-accelerated rendering.
+
+Features:
+• Full GFM Markdown rendering (tables, footnotes, task lists, strikethrough, definition lists, superscript, subscript, wikilinks)
+• Syntax-highlighted code blocks (supports 500+ languages via syntect)
+• LaTeX math rendering
+• Responsive design — two-pane (editor + preview) on wide screens, compact single-pane on narrow screens
+• Cross-platform: Linux, macOS, Windows, Web (WASM), Android
+• Native file open/save dialogs
+• Multiple typefaces bundled (OpenSans + JetBrains Mono)
+• Open source (LGPL-2.1)

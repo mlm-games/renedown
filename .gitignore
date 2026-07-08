@@ -1,2 +1,6 @@
 target/
 dist/
+/artifacts
+/aur-package
+/choco-package
+/others/snap/builds

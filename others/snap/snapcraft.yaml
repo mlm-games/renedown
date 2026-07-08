@@ -1,0 +1,45 @@
+name: renedown
+base: core24
+version: '0.3.0'
+summary: Cross-platform Markdown viewer and editor built with Repose
+description: |
+  Renedown is a Markdown viewer/editor built as a reference example for the
+  Repose GUI framework. It supports GFM, syntax-highlighted code blocks,
+  LaTeX math rendering, and responsive two-pane layout.
+grade: stable
+confinement: strict
+icon: snap/gui/icon.png
+title: Renedown
+license: LGPL-2.1
+platforms:
+  amd64:
+  arm64:
+apps:
+  renedown:
+    command: renedown
+    extensions: [gnome]
+    plugs:
+      - home
+      - network
+      - removable-media
+      - unity7
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+parts:
+  renedown:
+    plugin: dump
+    source: ./builds/
+    source-type: local
+    stage-packages:
+      - libpulse0
+      - libglu1-mesa
+      - libxcursor1
+      - libxinerama1
+      - libxrandr2
+      - libxi6
+      - libudev1
+    override-build: |
+      craftctl default
+      chmod +x $CRAFT_PART_INSTALL/renedown

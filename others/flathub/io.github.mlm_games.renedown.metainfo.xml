@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.mlm_games.renedown</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LGPL-2.1</project_license>
+  <developer id="io.github.mlm_games">
+    <name>MLM Games</name>
+  </developer>
+  <name>Renedown</name>
+  <summary>Cross-platform Markdown viewer/editor built with Repose</summary>
+  <description>
+    <p>
+      Renedown is a cross-platform Markdown viewer and editor built as a
+      reference example for the Repose GUI framework. It demonstrates how to
+      build a full-featured application with:
+    </p>
+    <ul>
+      <li>Rich Markdown rendering (GFM, tables, footnotes, task lists, math)</li>
+      <li>Syntax-highlighted code blocks via syntect</li>
+      <li>LaTeX math rendering</li>
+      <li>Responsive two-pane / single-pane layout</li>
+      <li>Native file open/save dialogs</li>
+      <li>Cross-platform support (Linux, macOS, Windows, Web, Android)</li>
+    </ul>
+  </description>
+  <developer_name>MLM Games</developer_name>
+  <categories>
+    <category>Office</category>
+    <category>Viewer</category>
+    <category>TextTools</category>
+  </categories>
+  <keywords>
+    <keyword>markdown</keyword>
+    <keyword>editor</keyword>
+    <keyword>viewer</keyword>
+    <keyword>preview</keyword>
+    <keyword>repose</keyword>
+  </keywords>
+  <icon type="stock" width="512" height="512">io.github.mlm_games.renedown</icon>
+  <url type="homepage">https://github.com/mlm-games/renedown</url>
+  <url type="bugtracker">https://github.com/mlm-games/renedown/issues</url>
+  <url type="donation">https://github.com/sponsors/mlm-games</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main editor view</caption>
+    </screenshot>
+  </screenshots>
+  <provides>
+    <binary>renedown</binary>
+    <mediatype>text/markdown</mediatype>
+  </provides>
+  <requires>
+    <display_length compare="ge">480</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <releases>
+    <release version="0.3.0" date="2026-07-08"/>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

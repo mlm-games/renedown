@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Renedown
+Comment=Markdown viewer and editor built with Repose — a reference example for the Repose GUI framework
+Categories=Office;Viewer;TextTools;
+Keywords=markdown;editor;viewer;preview;repose;
+Exec=renedown %F
+Icon=io.github.mlm_games.renedown
+Terminal=false
+StartupNotify=true
+StartupWMClass=renedown
+MimeType=text/markdown;text/x-markdown;

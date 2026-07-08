@@ -11,22 +11,53 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
+desktop-bin = []
 
 [[bin]]
 name = "renedown-desktop"
 path = "src/main.rs"
+required-features = ["desktop-bin"]
 
 [package.metadata.android]
 package = "org.mlm.renedown"
 apk_name = "renedown"
-target_sdk_version = 37
-min_sdk_version = 26
-build_targets = ["aarch64-linux-android"]
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android", "i686-linux-android"]
 split_per_abi = true
+resources = "others/packaging/res"
+java_sources = ["java/"]
 
 [package.metadata.android.application]
 label = "Renedown"
 fullscreen = false
+icon = "@drawable/ic_launcher_monochrome"
+
+[package.metadata.android.sdk]
+min_sdk_version = 26
+target_sdk_version = 37
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+[[package.metadata.android.application.activity]]
+name = "org.mlm.renedown.RenedownActivity"
+exported = true
+launch_mode = "singleTask"
+
+[[package.metadata.android.application.activity.intent_filter]]
+actions = ["android.intent.action.MAIN"]
+categories = ["android.intent.category.LAUNCHER"]
+
+[[package.metadata.android.application.activity.intent_filter]]
+actions = ["android.intent.action.VIEW"]
+categories = ["android.intent.category.DEFAULT", "android.intent.category.BROWSABLE"]
+
+[[package.metadata.android.application.activity.intent_filter.data]]
+scheme = "content"
+mime_type = "text/markdown"
+
+[[package.metadata.android.application.activity.intent_filter.data]]
+scheme = "file"
+mime_type = "text/markdown"
 
 [dependencies]
 repose-core = "0.22"
