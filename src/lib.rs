@@ -2,6 +2,8 @@ mod app;
 mod latex;
 mod markdown;
 
+mod file_picker;
+
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -25,6 +27,9 @@ use winit::platform::android::activity::AndroidApp;
 #[unsafe(no_mangle)]
 pub extern "C" fn android_main(android_app: AndroidApp) {
     android_logger::init_once(android_logger::Config::default().with_max_level(LevelFilter::Info));
+
+    rlobkit_dialogs::init();
+    rlobkit_dialogs::init_shared_pending_state();
 
     if let Err(err) = run_android_app(android_app, |s, _rc| app::app(s)) {
         log::error!("Renedown failed: {err:?}");

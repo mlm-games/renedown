@@ -1,3 +1,4 @@
+use crate::file_picker;
 use crate::markdown::MarkdownDocument;
 use repose_core::scroll::ScrollBinding;
 use repose_core::{PaddingValues, prelude::*, set_theme_default, signal};
@@ -5,89 +6,6 @@ use repose_material::material3::*;
 use repose_ui::scroll::remember_scroll_state;
 use repose_ui::*;
 use std::rc::Rc;
-
-const SAMPLE: &str = r##"# Renedown
-
-A **Multiplatform** Markdown renderer using `pulldown-cmark`, drawn with [Repose Material 3](https://example.com).
-
-## Typography
-
-Normal paragraph with **bold**, _italic_, ~~strikethrough~~ and `inline code`.
-Soft break — same visual line.
-
-Hard break follows (two trailing spaces)  
-new visual line.
-
-Super ^script^ and sub ~script~ demo. Math inline: $E = mc^2$.
-
-Inline fraction test: $\frac{1}{2}$ cup of sugar and $\frac{a+b}{c+d}$ gallons of water. This text should not overlap with adjacent lines despite the tall fraction. $\frac{x^2 + y^2}{z^2 + 1}$ is the formula.
-
-## Block quote
-
-> "Simplicity is the ultimate sophistication."
->
-> Nested paragraph inside the quote.
-
-## Lists
-
-- Alpha
-- Beta
-  - Nested
-  - Another
-- Gamma
-
-1. First
-2. Second
-3. Third
-
-- [x] Clickable links
-- [x] Tables with alignment
-- [ ] Native image loading
-
-## Definition list
-
-Term one
-: The first definition.
-: An alternative definition.
-
-Term two
-: The definition for the second term.
-
-## Table
-
-| Feature            | Status | Notes         |
-|:-------------------|:------:|--------------:|
-| Headings H1-H6     |   ✓    | with dividers |
-| Bold / Italic      |   ✓    |               |
-| Strikethrough      |   ✓    |               |
-| Inline code        |   ✓    |               |
-| Fenced code blocks |   ✓    | lang badge    |
-| Block quotes       |   ✓    | accent bar    |
-| Ordered lists      |   ✓    |               |
-| Nested lists       |   ✓    |               |
-| Task lists         |   ✓    |               |
-| Tables             |   ✓    | col-alignment |
-| Links / wikilinks  |   ✓    |               |
-| Horizontal rules   |   ✓    |               |
-| Footnotes[^1]      |   ✓    |               |
-| Math ($x^2$)       |   ✓    |               |
-| Super / sub        |   ✓    |               |
-| Definition lists   |   ✓    |               |
-
-[^1]: This is a footnote definition.
-
-## Code
-
-```rust
-fn greet(name: &str) -> String {
-    format!("Hello, {name}!")
-}
-```
-
----
-
-> Runs on **desktop**, **web**, and **Android** from one Repose codebase.
-"##;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Pane {
@@ -100,14 +18,70 @@ const COMPACT_BREAKPOINT: f32 = 760.0;
 pub fn app(_s: &mut Scheduler) -> View {
     set_theme_default(Theme::default());
 
-    // Single reactive source of truth.
-    let doc = remember_with_key("renedown:doc", || signal(SAMPLE.to_string()));
+    let doc = remember_with_key("renedown:doc", || signal(String::new()));
     let last_link = remember_with_key("renedown:last_link", || signal(String::new()));
     let pane = remember_with_key("renedown:pane", || signal(Pane::Preview));
     let page_scroll = remember_scroll_state("renedown:page_scroll");
-
-    // Compact mode: set by on_size_changed on the root Box.
     let compact = remember_with_key("renedown:compact", || signal(false));
+
+    // File picker state: receivers to poll
+    let open_rx = remember_with_key("renedown:open_rx", || signal(None::<flume::Receiver<Result<Option<String>, String>>>));
+    let save_rx = remember_with_key("renedown:save_rx", || signal(None::<flume::Receiver<Result<(), String>>>));
+
+    // Poll open result
+    {
+        let rx = open_rx.get();
+        if let Some(rx) = rx {
+            match rx.try_recv() {
+                Ok(result) => {
+                    match result {
+                        Ok(Some(content)) => doc.set(content),
+                        Ok(None) => {}
+                        Err(e) => log::error!("Failed to open file: {e}"),
+                    }
+                    open_rx.set(None);
+                }
+                Err(flume::TryRecvError::Empty) => open_rx.set(Some(rx)),
+                Err(flume::TryRecvError::Disconnected) => open_rx.set(None),
+            }
+        }
+    }
+
+    // Poll save result
+    {
+        let rx = save_rx.get();
+        if let Some(rx) = rx {
+            match rx.try_recv() {
+                Ok(result) => {
+                    match result {
+                        Ok(()) => log::info!("File saved"),
+                        Err(e) => log::error!("Failed to save file: {e}"),
+                    }
+                    save_rx.set(None);
+                }
+                Err(flume::TryRecvError::Empty) => save_rx.set(Some(rx)),
+                Err(flume::TryRecvError::Disconnected) => save_rx.set(None),
+            }
+        }
+    }
+
+    let on_open = {
+        let open_rx = open_rx.clone();
+        move || {
+            let rx = file_picker::spawn_open_file("Open Markdown", &["md", "markdown"]);
+            open_rx.set(Some(rx));
+        }
+    };
+
+    let on_save = {
+        let doc = doc.clone();
+        let save_rx = save_rx.clone();
+        move || {
+            let content = doc.get().into_bytes();
+            let rx = file_picker::spawn_save_file("Save Markdown", "document", "md", content);
+            save_rx.set(Some(rx));
+        }
+    };
 
     let current_doc = doc.get();
     let current_link = last_link.get();
@@ -123,7 +97,6 @@ pub fn app(_s: &mut Scheduler) -> View {
     };
 
     let body: View = if is_compact {
-        // Only build the visible pane in compact mode.
         let pane_content = match current_pane {
             Pane::Editor => panel(
                 "Editor",
@@ -162,7 +135,6 @@ pub fn app(_s: &mut Scheduler) -> View {
         ))
     };
 
-    // Page-wide scroll binding (cached so physics persists).
     let page_binding = remember_with_key("renedown:page_binding", || page_scroll.to_binding());
     let page_axis = match &*page_binding {
         ScrollBinding::Vertical(b) => b.clone(),
@@ -170,22 +142,13 @@ pub fn app(_s: &mut Scheduler) -> View {
     };
 
     let inner = Column(Modifier::new().fill_max_size()).child((
-        top_bar(
-            is_compact,
-            current_pane,
-            {
-                let pane = pane.clone();
-                move |p| pane.set(p)
-            },
-            {
-                let doc = doc.clone();
-                move || doc.set(SAMPLE.to_string())
-            },
-            {
-                let doc = doc.clone();
-                move || doc.set(String::new())
-            },
-        ),
+        top_bar(is_compact, current_pane, {
+            let pane = pane.clone();
+            move |p| pane.set(p)
+        }, on_open, on_save, {
+            let doc = doc.clone();
+            move || doc.set(String::new())
+        }),
         Box(Modifier::new().fill_max_width().flex_grow(1.0)).child(body),
         status_bar(&current_doc, &current_link, {
             let last_link = last_link.clone();
@@ -211,7 +174,8 @@ fn top_bar(
     compact: bool,
     current_pane: Pane,
     on_pane: impl Fn(Pane) + Clone + 'static,
-    on_reset: impl Fn() + 'static,
+    on_open: impl Fn() + 'static,
+    on_save: impl Fn() + 'static,
     on_clear: impl Fn() + 'static,
 ) -> View {
     let mut actions: Vec<View> = Vec::new();
@@ -227,9 +191,16 @@ fn top_bar(
 
     actions.push(TextButton(
         Modifier::new(),
-        on_reset,
+        on_open,
         ButtonConfig::default(),
-        || Text("Sample").size(14.0),
+        || Text("Open").size(14.0),
+    ));
+    actions.push(hspace(4.0));
+    actions.push(TextButton(
+        Modifier::new(),
+        on_save,
+        ButtonConfig::default(),
+        || Text("Save").size(14.0),
     ));
     actions.push(hspace(4.0));
     actions.push(TextButton(
