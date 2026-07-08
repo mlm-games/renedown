@@ -3,15 +3,19 @@ name = "renedown"
 version = "0.3.2"
 edition = "2024"
 publish = false
-default-run = "renedown"
+default-run = "renedown-desktop"
 
 [lib]
 name = "renedown"
 crate-type = ["cdylib", "rlib"]
 
+[features]
+desktop-bin = []
+
 [[bin]]
-name = "renedown"
+name = "renedown-desktop"
 path = "src/main.rs"
+required-features = ["desktop-bin"]
 
 [package.metadata.android]
 package = "org.mlm.renedown"
