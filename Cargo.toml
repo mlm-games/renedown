@@ -34,7 +34,10 @@ repose-ui = "0.22"
 repose-material = "0.22"
 repose-platform = "0.22"
 repose-render-wgpu = "0.22"
-repose-text = {version = "0.22",  default-features = false, features = ["basic", "monospace"]}
+repose-text = { version = "0.22", default-features = false, features = [
+    "basic",
+    "monospace",
+] }
 # repose-core = { path = "../repose/crates/repose-core" }
 # repose-ui = { path = "../repose/crates/repose-ui" }
 # repose-material = { path = "../repose/crates/repose-material" }
@@ -48,9 +51,12 @@ winit = "0.30"
 env_logger = "0.11"
 anyhow = "1"
 log = "0.4"
-syntect = { version = "5.3", default-features = false, features = ["default-fancy"] }
+syntect = { version = "5.3", default-features = false, features = [
+    "default-fancy",
+] }
 
-rlobkit-dialogs = "0.3"
+# rlobkit-dialogs = { path = "../rlobkit/rlobkit-dialogs" }
+rlobkit-dialogs = "0.4"
 flume = "0.12"
 futures-lite = "2"
 
