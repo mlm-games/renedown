@@ -32,8 +32,12 @@ pub fn app(_s: &mut Scheduler) -> View {
     let compact = remember_with_key("renedown:compact", || signal(false));
 
     // File picker state: receivers to poll
-    let open_rx = remember_with_key("renedown:open_rx", || signal(None::<flume::Receiver<Result<Option<String>, String>>>));
-    let save_rx = remember_with_key("renedown:save_rx", || signal(None::<flume::Receiver<Result<(), String>>>));
+    let open_rx = remember_with_key("renedown:open_rx", || {
+        signal(None::<flume::Receiver<Result<Option<String>, String>>>)
+    });
+    let save_rx = remember_with_key("renedown:save_rx", || {
+        signal(None::<flume::Receiver<Result<(), String>>>)
+    });
 
     // Poll open result
     {
@@ -149,13 +153,20 @@ pub fn app(_s: &mut Scheduler) -> View {
     };
 
     let inner = Column(Modifier::new().fill_max_size()).child((
-        top_bar(is_compact, current_pane, {
-            let pane = pane.clone();
-            move |p| pane.set(p)
-        }, on_open, on_save, {
-            let doc = doc.clone();
-            move || doc.set(String::new())
-        }),
+        top_bar(
+            is_compact,
+            current_pane,
+            {
+                let pane = pane.clone();
+                move |p| pane.set(p)
+            },
+            on_open,
+            on_save,
+            {
+                let doc = doc.clone();
+                move || doc.set(String::new())
+            },
+        ),
         Box(Modifier::new().fill_max_width().flex_grow(1.0)).child(body),
         status_bar(&current_doc, &current_link, {
             let last_link = last_link.clone();
@@ -206,7 +217,7 @@ fn top_bar(
         on_save,
         IconButtonConfig::default(),
     ));
-    actions.push(TextButton(
+    actions.push(OutlinedButton(
         Modifier::new(),
         on_clear,
         ButtonConfig::default(),
@@ -214,10 +225,7 @@ fn top_bar(
             Row(Modifier::new()
                 .align_items(AlignItems::CENTER)
                 .column_gap(4.0))
-            .child((
-                Icon(Symbols::CLOSE).size(18.0),
-                Text("Clear").size(14.0),
-            ))
+            .child((Icon(Symbols::CLOSE).size(18.0), Text("Clear").size(14.0)))
         },
     ));
 
