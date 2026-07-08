@@ -231,7 +231,10 @@ fn top_bar(
 
     Column(Modifier::new().fill_max_width().background(theme().surface)).child((
         TopAppBar(
+            #[cfg(all(not(target_os = "android")))]
             Text("Renedown"),
+            #[cfg(all(target_os = "android"))]
+            Text(""),
             None,
             None,
             actions,
