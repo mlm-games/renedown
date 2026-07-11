@@ -2973,6 +2973,7 @@ dependencies = [
  "repose-render-wgpu",
  "repose-text",
  "repose-ui",
+ "rlobkit-app-events",
  "rlobkit-dialogs",
  "syntect",
  "wasm-bindgen",
@@ -3171,6 +3172,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlobkit-app-events"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "614bae11ac281cbccf354ddb9a781f10a2ce88e56b2e1cfb1b1f0af115819135"
+dependencies = [
+ "jni",
+ "log",
+]
+
+[[package]]
 name = "rlobkit-core"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3185,9 +3196,9 @@ dependencies = [
 
 [[package]]
 name = "rlobkit-dialogs"
-version = "0.4.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16e31908398af2f5b1f8641eb97efd09aa67eb4396d1f35340f8858a1af15126"
+checksum = "995e0968f2a7b004fbd9c5f6bb5dfbbc5500754b48981c5b8485d21ef980dda4"
 dependencies = [
  "bytes",
  "futures-lite",

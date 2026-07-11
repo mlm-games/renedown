@@ -10,7 +10,6 @@ name = "renedown"
 crate-type = ["cdylib", "rlib"]
 
 
-
 [[bin]]
 name = "renedown-desktop"
 path = "src/main.rs"
@@ -18,10 +17,14 @@ path = "src/main.rs"
 [package.metadata.android]
 package = "org.mlm.renedown"
 apk_name = "renedown"
-build_targets = ["aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android", "i686-linux-android"]
+build_targets = [
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "x86_64-linux-android",
+    "i686-linux-android",
+]
 split_per_abi = true
 resources = "others/packaging/res"
-java_sources = ["java/"]
 
 [package.metadata.android.application]
 label = "Renedown"
@@ -37,7 +40,7 @@ target_sdk_version = 36
 name = "android.permission.INTERNET"
 
 [[package.metadata.android.application.activity]]
-name = "org.mlm.renedown.RenedownActivity"
+name = "rust.rlobkit.RlobKitMainActivity"
 exported = true
 launch_mode = "singleTask"
 
@@ -47,7 +50,10 @@ categories = ["android.intent.category.LAUNCHER"]
 
 [[package.metadata.android.application.activity.intent_filter]]
 actions = ["android.intent.action.VIEW"]
-categories = ["android.intent.category.DEFAULT", "android.intent.category.BROWSABLE"]
+categories = [
+    "android.intent.category.DEFAULT",
+    "android.intent.category.BROWSABLE",
+]
 
 [[package.metadata.android.application.activity.intent_filter.data]]
 scheme = "content"
@@ -82,12 +88,14 @@ syntect = { version = "5.3", default-features = false, features = [
 ] }
 
 # rlobkit-dialogs = { path = "../rlobkit/rlobkit-dialogs" }
-rlobkit-dialogs = "0.4"
+rlobkit-dialogs = "0.5"
 flume = "0.12"
 futures-lite = "2"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.15"
+rlobkit-app-events = { version = "0.5", features = ["jni-bridge"] }
+# rlobkit-app-events = { path = "../rlobkit/rlobkit-app-events", features = ["jni-bridge"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

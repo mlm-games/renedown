@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
     rlobkit_dialogs::init();
 
     #[cfg(all(not(target_os = "android"), not(target_arch = "wasm32")))]
-    repose_platform::run_desktop_app(|s, _rc| app::app(s))?;
+    repose_platform::run_desktop_app(|s, _rc| app::app(s, None))?;
 
     Ok(())
 }

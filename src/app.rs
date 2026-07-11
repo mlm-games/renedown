@@ -56,10 +56,19 @@ enum PendingAction {
 
 const COMPACT_BREAKPOINT: f32 = 760.0;
 
-pub fn app(_s: &mut Scheduler) -> View {
+pub fn app(_s: &mut Scheduler, initial_content: Option<String>) -> View {
     set_theme_default(Theme::default());
 
-    let doc = remember_with_key("renedown:doc", || signal(DocumentState::new()));
+    let init_state = match &initial_content {
+        Some(text) if !text.is_empty() => DocumentState {
+            text: text.clone(),
+            display_name: "Document".to_string(),
+            source: None,
+            saved_text: text.clone(),
+        },
+        _ => DocumentState::new(),
+    };
+    let doc = remember_with_key("renedown:doc", || signal(init_state));
     let last_link = remember_with_key("renedown:last_link", || signal(String::new()));
     let pane = remember_with_key("renedown:pane", || signal(Pane::Preview));
     let page_scroll = remember_scroll_state("renedown:page_scroll");
@@ -293,7 +302,12 @@ pub fn app(_s: &mut Scheduler) -> View {
         };
         Row(Modifier::new()
             .fill_max_width()
-            .padding_values(PaddingValues { left: 16.0, right: 8.0, top: 0.0, bottom: 0.0 })
+            .padding_values(PaddingValues {
+                left: 16.0,
+                right: 8.0,
+                top: 0.0,
+                bottom: 0.0,
+            })
             .align_items(AlignItems::CENTER)
             .background(theme().error_container))
         .child((
@@ -302,12 +316,9 @@ pub fn app(_s: &mut Scheduler) -> View {
             TextButton(Modifier::new(), on_cancel, ButtonConfig::default(), || {
                 Text("Cancel").size(13.0)
             }),
-            TextButton(
-                Modifier::new(),
-                on_confirm,
-                ButtonConfig::default(),
-                || Text("Discard").size(13.0).color(theme().on_error_container),
-            ),
+            TextButton(Modifier::new(), on_confirm, ButtonConfig::default(), || {
+                Text("Discard").size(13.0).color(theme().on_error_container)
+            }),
         ))
     });
 
