@@ -821,7 +821,7 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
 }
 
 fn intersperse_vertical(children: Vec<View>, gap: f32) -> Vec<View> {
-    let mut result = Vec::with_capacity(children.len() * 2 - 1);
+    let mut result = Vec::with_capacity(children.len().saturating_mul(2).saturating_sub(1));
     for (i, child) in children.into_iter().enumerate() {
         if i > 0 {
             result.push(Box(Modifier::new().height(gap).width(1.0)));

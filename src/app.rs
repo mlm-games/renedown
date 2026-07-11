@@ -1,4 +1,4 @@
-use crate::file_picker;
+use crate::file_picker::{self, SaveOutcome};
 use crate::markdown::MarkdownDocument;
 use repose_core::scroll::ScrollBinding;
 use repose_core::{PaddingValues, prelude::*, set_theme_default, signal};
@@ -36,8 +36,9 @@ pub fn app(_s: &mut Scheduler) -> View {
         signal(None::<flume::Receiver<Result<Option<String>, String>>>)
     });
     let save_rx = remember_with_key("renedown:save_rx", || {
-        signal(None::<flume::Receiver<Result<(), String>>>)
+        signal(None::<flume::Receiver<Result<SaveOutcome, String>>>)
     });
+    let picker_busy = remember_with_key("renedown:busy", || signal(false));
 
     // Poll open result
     {
@@ -51,9 +52,13 @@ pub fn app(_s: &mut Scheduler) -> View {
                         Err(e) => log::error!("Failed to open file: {e}"),
                     }
                     open_rx.set(None);
+                    picker_busy.set(false);
                 }
-                Err(flume::TryRecvError::Empty) => open_rx.set(Some(rx)),
-                Err(flume::TryRecvError::Disconnected) => open_rx.set(None),
+                Err(flume::TryRecvError::Empty) => {}
+                Err(flume::TryRecvError::Disconnected) => {
+                    open_rx.set(None);
+                    picker_busy.set(false);
+                }
             }
         }
     }
@@ -65,20 +70,30 @@ pub fn app(_s: &mut Scheduler) -> View {
             match rx.try_recv() {
                 Ok(result) => {
                     match result {
-                        Ok(()) => log::info!("File saved"),
+                        Ok(SaveOutcome::Saved) => log::info!("File saved"),
+                        Ok(SaveOutcome::Cancelled) => log::info!("Save cancelled"),
                         Err(e) => log::error!("Failed to save file: {e}"),
                     }
                     save_rx.set(None);
+                    picker_busy.set(false);
                 }
-                Err(flume::TryRecvError::Empty) => save_rx.set(Some(rx)),
-                Err(flume::TryRecvError::Disconnected) => save_rx.set(None),
+                Err(flume::TryRecvError::Empty) => {}
+                Err(flume::TryRecvError::Disconnected) => {
+                    save_rx.set(None);
+                    picker_busy.set(false);
+                }
             }
         }
     }
 
     let on_open = {
         let open_rx = open_rx.clone();
+        let busy = picker_busy.clone();
         move || {
+            if busy.get() {
+                return;
+            }
+            busy.set(true);
             let rx = file_picker::spawn_open_file("Open Markdown", &["md", "markdown"]);
             open_rx.set(Some(rx));
         }
@@ -87,7 +102,12 @@ pub fn app(_s: &mut Scheduler) -> View {
     let on_save = {
         let doc = doc.clone();
         let save_rx = save_rx.clone();
+        let busy = picker_busy.clone();
         move || {
+            if busy.get() {
+                return;
+            }
+            busy.set(true);
             let content = doc.get().into_bytes();
             let rx = file_picker::spawn_save_file("Save Markdown", "document", "md", content);
             save_rx.set(Some(rx));
@@ -289,7 +309,7 @@ fn segmented(
 fn status_bar(doc: &str, last_link: &str, on_dismiss: impl Fn() + 'static) -> View {
     let words = doc.split_whitespace().count();
     let chars = doc.chars().count();
-    let lines = doc.lines().count().max(1);
+    let lines = doc.split('\n').count();
 
     let mut children: Vec<View> = vec![
         Text(format!("{lines} lines · {words} words · {chars} chars"))

@@ -1,6 +1,12 @@
 use rlobkit_dialogs::picker::{OpenFileOptions, SaveFileOptions};
 use rlobkit_dialogs::{RlobKit, RlobKitType};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SaveOutcome {
+    Saved,
+    Cancelled,
+}
+
 pub fn spawn_open_file(
     title: &str,
     extensions: &[&str],
@@ -79,7 +85,7 @@ pub fn spawn_save_file(
     suggested_name: &str,
     extension: &str,
     content: Vec<u8>,
-) -> flume::Receiver<Result<(), String>> {
+) -> flume::Receiver<Result<SaveOutcome, String>> {
     let (tx, rx) = flume::unbounded();
     let title = title.to_string();
     let suggested = suggested_name.to_string();
@@ -87,8 +93,8 @@ pub fn spawn_save_file(
 
     #[cfg(not(target_arch = "wasm32"))]
     std::thread::spawn(move || {
-        let result = (|| -> Result<(), String> {
-            futures_lite::future::block_on(RlobKit::save_bytes(
+        let result = (|| -> Result<SaveOutcome, String> {
+            match futures_lite::future::block_on(RlobKit::save_bytes(
                 SaveFileOptions {
                     suggested_name: Some(suggested),
                     extension: Some(ext),
@@ -101,8 +107,11 @@ pub fn spawn_save_file(
                 },
                 &content,
             ))
-            .map_err(|e| e.to_string())?;
-            Ok(())
+            .map_err(|e| e.to_string())?
+            {
+                Some(_) => Ok(SaveOutcome::Saved),
+                None => Ok(SaveOutcome::Cancelled),
+            }
         })();
         let _ = tx.send(result);
     });
@@ -110,7 +119,7 @@ pub fn spawn_save_file(
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_futures::spawn_local(async move {
         let result = (|| async {
-            RlobKit::save_bytes(
+            match RlobKit::save_bytes(
                 SaveFileOptions {
                     suggested_name: Some(suggested),
                     extension: Some(ext),
@@ -124,8 +133,11 @@ pub fn spawn_save_file(
                 &content,
             )
             .await
-            .map_err(|e| e.to_string())?;
-            Ok(())
+            .map_err(|e| e.to_string())?
+            {
+                Some(_) => Ok(SaveOutcome::Saved),
+                None => Ok(SaveOutcome::Cancelled),
+            }
         })()
         .await;
         let _ = tx.send(result);

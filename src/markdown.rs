@@ -4,7 +4,7 @@ use pulldown_cmark::{
     Options, Parser, Tag, TagEnd, TextMergeStream,
 };
 use repose_core::scroll::ScrollBinding;
-use repose_core::{FontStyle, FontWeight, PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
+use repose_core::{FontWeight, PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider, IconButton, IconButtonConfig};
 use repose_material::{Icon, material_symbols};
 use repose_ui::scroll::remember_horizontal_scroll_state;
@@ -714,6 +714,7 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
 
         Block::CodeBlock { lang, code } => {
             let code_text = code.trim_end().to_string();
+            let orig_code = code.clone();
 
             Box(Modifier::new()
                 .fill_max_width()
@@ -755,10 +756,7 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
                             Icon(Symbols::CONTENT_COPY)
                                 .size(18.0)
                                 .color(theme().on_surface.with_alpha_f32(0.6)),
-                            {
-                                let code_copy = code_text.clone();
-                                move || copy_to_clipboard(&code_copy)
-                            },
+                            move || copy_to_clipboard(&orig_code),
                             IconButtonConfig {
                                 container_size: Some(32.0),
                                 colors: repose_material::material3::IconButtonColors {
@@ -1431,6 +1429,7 @@ fn accumulate_text_inlines(
                         start,
                         end: text_buf.len(),
                         style: SpanStyle {
+                            font_weight: Some(FontWeight::BOLD.0),
                             ..SpanStyle::default()
                         },
                         url: None,
@@ -1444,7 +1443,10 @@ fn accumulate_text_inlines(
                     spans.push(TextSpan {
                         start,
                         end: text_buf.len(),
-                        style: SpanStyle::default(),
+                        style: SpanStyle {
+                            font_style: Some(1),
+                            ..SpanStyle::default()
+                        },
                         url: None,
                     });
                 }
@@ -1474,7 +1476,16 @@ fn accumulate_text_inlines(
             Inline::Code(t) | Inline::Html(t) | Inline::InlineHtml(t) | Inline::InlineMath(t) => {
                 text_buf.push_str(t)
             }
-            Inline::Link { label, .. } | Inline::Image { label, .. } => {
+            Inline::Link {
+                label, url, ..
+            } => {
+                let span_start = spans.len();
+                accumulate_text_inlines(label, style, text_buf, spans, on_link);
+                for i in span_start..spans.len() {
+                    spans[i].url = Some(url.clone().into());
+                }
+            }
+            Inline::Image { label, .. } => {
                 text_buf.push_str(&plain_text(label));
             }
             Inline::FootnoteReference(l) => {
@@ -1606,7 +1617,9 @@ fn highlight_code(code: &str, lang: Option<&str>) -> View {
         })
         .unwrap_or_else(|| SYNTAX_SET.find_syntax_plain_text());
 
-    let theme_name = if theme().on_surface.0 < 128 {
+    let c = theme().on_surface;
+    let luminance = 0.299 * c.0 as f32 + 0.587 * c.1 as f32 + 0.114 * c.2 as f32;
+    let theme_name = if luminance > 128.0 {
         "base16-ocean.light"
     } else {
         "base16-ocean.dark"
@@ -1618,7 +1631,7 @@ fn highlight_code(code: &str, lang: Option<&str>) -> View {
     for line in syntect::util::LinesWithEndings::from(code) {
         let regions = highlighter
             .highlight_line(line, &SYNTAX_SET)
-            .unwrap_or_default();
+            .unwrap_or_else(|_| vec![(syntect::highlighting::Style::default(), line)]);
         for (style, text) in &regions {
             let c = repose_core::Color(
                 style.foreground.r,
