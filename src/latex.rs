@@ -1,4 +1,4 @@
-use repose_core::{prelude::*, PaddingValues};
+use repose_core::{Overflow, prelude::*, PaddingValues};
 use repose_ui::*;
 
 fn latex_cmd_to_unicode(cmd: &str) -> Option<&'static str> {
@@ -469,6 +469,28 @@ fn parse_math_until(
                 chars.next();
                 let cmd = read_alpha_name(chars);
                 if cmd.is_empty() {
+                    if let Some(&(_, next)) = chars.peek() {
+                        let escaped = match next {
+                            '{' | '}' => Some(next),
+                            '_' => Some('_'),
+                            '&' => Some('&'),
+                            '%' => Some('%'),
+                            ',' => Some(','),
+                            ';' => Some(';'),
+                            '!' => Some('!'),
+                            '#' => Some('#'),
+                            '$' => Some('$'),
+                            ' ' => Some(' '),
+                            '~' => Some('\u{00A0}'),
+                            '\\' => Some('\\'),
+                            _ => None,
+                        };
+                        if let Some(c) = escaped {
+                            chars.next();
+                            buf.push(c);
+                            continue;
+                        }
+                    }
                     continue;
                 }
                 if cmd == "over" {
@@ -732,15 +754,33 @@ fn build_math_view(segs: Vec<Seg>, font_size: f32) -> Vec<View> {
                 FlowRow(Modifier::new()).child(build_math_view(children, font_size))
             }
             Seg::Accent(combining, children) => {
-                let mut kids = build_math_view(children, font_size);
-                kids.push(
-                    Text(combining)
+                let all_text = children.iter().all(|s| matches!(s, Seg::Text(_)));
+                if all_text {
+                    let mut text = String::new();
+                    for s in &children {
+                        if let Seg::Text(t) = s {
+                            text.push_str(t);
+                        }
+                    }
+                    text.push_str(combining);
+                    Text(text)
                         .font_family("monospace")
                         .size(font_size)
                         .color(color)
-                        .into(),
-                );
-                FlowRow(Modifier::new()).child(kids)
+                        .into()
+                } else {
+                    let kids = build_math_view(children, font_size);
+                    FlowRow(Modifier::new()).child((
+                        kids,
+                        Box(Modifier::new()
+                            .translate(0.0, -font_size * 0.4)
+                            .overflow(Overflow::Visible))
+                        .child(Text(combining)
+                            .font_family("monospace")
+                            .size(font_size)
+                            .color(color)),
+                    ))
+                }
             }
             Seg::Matrix { ref env, ref rows } => {
                 let (left_delim, right_delim) = match env {

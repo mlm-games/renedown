@@ -7,9 +7,11 @@ use repose_core::scroll::ScrollBinding;
 use repose_core::{FontWeight, PaddingValues, TextDecoration, clipboard::copy_to_clipboard, prelude::*};
 use repose_material::material3::{DividerConfig, HorizontalDivider, IconButton, IconButtonConfig};
 use repose_material::{Icon, material_symbols};
-use repose_ui::scroll::remember_horizontal_scroll_state;
+use repose_ui::scroll::{remember_horizontal_scroll_state, HorizontalScrollArea};
 use repose_ui::*;
 use std::cell::RefCell;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 use std::sync::LazyLock;
 use syntect::easy::HighlightLines;
@@ -712,68 +714,77 @@ fn render_block(block: &Block, on_link: Rc<dyn Fn(String)>) -> View {
             )
         }
 
-        Block::CodeBlock { lang, code } => {
-            let code_text = code.trim_end().to_string();
-            let orig_code = code.clone();
+            Block::CodeBlock { lang, code } => {
+                let code_text = code.trim_end().to_string();
+                let orig_code = code.clone();
 
-            Box(Modifier::new()
-                .fill_max_width()
-                .background(theme().surface_container)
-                .clip_rounded(16.0)
-                .border(1.0, theme().outline_variant, 16.0))
-            .child(
-                Column(Modifier::new().fill_max_width()).child((
-                    Row(Modifier::new()
-                        .fill_max_width()
-                        .padding_values(PaddingValues {
-                            left: 14.0,
-                            right: 8.0,
-                            top: 8.0,
-                            bottom: 4.0,
-                        }))
-                    .child((
-                        lang.as_ref().map_or(Box(Modifier::new()), |l| {
-                            Box(Modifier::new()
-                                .background(theme().secondary_container)
-                                .clip_rounded(999.0)
-                                .padding_values(PaddingValues {
-                                    left: 8.0,
-                                    right: 8.0,
-                                    top: 4.0,
-                                    bottom: 4.0,
-                                })
-                                .align_items(AlignItems::CENTER)
-                                .justify_content(JustifyContent::CENTER))
-                            .child(
-                                Text(l.clone())
-                                    .font_family("monospace")
-                                    .size(11.0)
-                                    .color(theme().on_secondary_container),
-                            )
-                        }),
-                        Spacer(),
-                        IconButton(
-                            Icon(Symbols::CONTENT_COPY)
-                                .size(18.0)
-                                .color(theme().on_surface.with_alpha_f32(0.6)),
-                            move || copy_to_clipboard(&orig_code),
-                            IconButtonConfig {
-                                container_size: Some(32.0),
-                                colors: repose_material::material3::IconButtonColors {
-                                    container_color: Color::TRANSPARENT,
-                                    content_color: theme().on_surface.with_alpha_f32(0.6),
-                                    disabled_container_color: Color::TRANSPARENT,
-                                    disabled_content_color: theme().on_surface.with_alpha_f32(0.38),
+                let mut hasher = DefaultHasher::new();
+                code.hash(&mut hasher);
+                let scroll_key = format!("cb:{}", hasher.finish());
+                let hscroll = remember_horizontal_scroll_state(scroll_key);
+
+                Box(Modifier::new()
+                    .fill_max_width()
+                    .background(theme().surface_container)
+                    .clip_rounded(16.0)
+                    .border(1.0, theme().outline_variant, 16.0))
+                .child(
+                    Column(Modifier::new().fill_max_width()).child((
+                        Row(Modifier::new()
+                            .fill_max_width()
+                            .padding_values(PaddingValues {
+                                left: 14.0,
+                                right: 8.0,
+                                top: 8.0,
+                                bottom: 4.0,
+                            }))
+                        .child((
+                            lang.as_ref().map_or(Box(Modifier::new()), |l| {
+                                Box(Modifier::new()
+                                    .background(theme().secondary_container)
+                                    .clip_rounded(999.0)
+                                    .padding_values(PaddingValues {
+                                        left: 8.0,
+                                        right: 8.0,
+                                        top: 4.0,
+                                        bottom: 4.0,
+                                    })
+                                    .align_items(AlignItems::CENTER)
+                                    .justify_content(JustifyContent::CENTER))
+                                .child(
+                                    Text(l.clone())
+                                        .font_family("monospace")
+                                        .size(11.0)
+                                        .color(theme().on_secondary_container),
+                                )
+                            }),
+                            Spacer(),
+                            IconButton(
+                                Icon(Symbols::CONTENT_COPY)
+                                    .size(18.0)
+                                    .color(theme().on_surface.with_alpha_f32(0.6)),
+                                move || copy_to_clipboard(&orig_code),
+                                IconButtonConfig {
+                                    container_size: Some(32.0),
+                                    colors: repose_material::material3::IconButtonColors {
+                                        container_color: Color::TRANSPARENT,
+                                        content_color: theme().on_surface.with_alpha_f32(0.6),
+                                        disabled_container_color: Color::TRANSPARENT,
+                                        disabled_content_color: theme().on_surface.with_alpha_f32(0.38),
+                                    },
+                                    ..Default::default()
                                 },
-                                ..Default::default()
-                            },
+                            ),
+                        )),
+                        HorizontalScrollArea(
+                            Modifier::new(),
+                            hscroll,
+                            Box(Modifier::new().padding(14.0))
+                                .child(highlight_code(&code_text, lang.as_deref())),
                         ),
                     )),
-                    Box(Modifier::new().padding(14.0))
-                        .child(highlight_code(&code_text, lang.as_deref())),
-                )),
-            )
-        }
+                )
+            }
 
         Block::List {
             ordered,
@@ -1000,12 +1011,19 @@ fn render_table(
         ));
     }
 
-    Box(Modifier::new()
-        .fill_max_width()
-        .background(theme().surface_container_low)
-        .clip_rounded(16.0)
-        .border(1.0, theme().outline_variant, 16.0))
-    .child(Column(Modifier::new().fill_max_width()).child(row_views))
+    let scroll_key = format!("tbl:{}:{}", rows.len(), head.len());
+    let hscroll = remember_horizontal_scroll_state(scroll_key);
+
+    HorizontalScrollArea(
+        Modifier::new(),
+        hscroll,
+        Box(Modifier::new()
+            .fill_max_width()
+            .background(theme().surface_container_low)
+            .clip_rounded(16.0)
+            .border(1.0, theme().outline_variant, 16.0))
+        .child(Column(Modifier::new().fill_max_width()).child(row_views)),
+    )
 }
 
 fn render_table_row(

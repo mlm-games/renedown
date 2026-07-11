@@ -145,3 +145,29 @@ pub fn spawn_save_file(
 
     rx
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn spawn_save_direct(
+    path: String,
+    content: Vec<u8>,
+) -> flume::Receiver<Result<SaveOutcome, String>> {
+    let (tx, rx) = flume::unbounded();
+    std::thread::spawn(move || {
+        let result = (|| -> Result<SaveOutcome, String> {
+            std::fs::write(&path, &content).map_err(|e| e.to_string())?;
+            Ok(SaveOutcome::Saved)
+        })();
+        let _ = tx.send(result);
+    });
+    rx
+}
+
+#[cfg(target_arch = "wasm32")]
+pub fn spawn_save_direct(
+    _path: String,
+    _content: Vec<u8>,
+) -> flume::Receiver<Result<SaveOutcome, String>> {
+    let (tx, rx) = flume::unbounded();
+    let _ = tx.send(Err("Direct save not available on web".to_string()));
+    rx
+}
