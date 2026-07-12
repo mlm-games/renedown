@@ -1,4 +1,4 @@
-name: AUR upload (retorrent-bin)
+name: AUR upload (bin)
 on:
   workflow_dispatch:
     inputs:
