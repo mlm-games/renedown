@@ -1,6 +1,6 @@
 [package]
 name = "renedown"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 publish = false
 default-run = "renedown-desktop"
@@ -32,7 +32,7 @@ fullscreen = false
 icon = "@drawable/ic_launcher_monochrome"
 
 [package.metadata.android.sdk]
-version_code = 16778241
+version_code = 16778242
 min_sdk_version = 26
 target_sdk_version = 36
 
