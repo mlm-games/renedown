@@ -21,10 +21,7 @@ jobs:
       license: "LGPL-2.1-or-later"
       provides: "renedown"
       conflicts: "renedown"
-      desktop-comment: "Markdown viewer and editor built with Repose"
-      desktop-categories: "Office;Viewer;TextTools;"
-      desktop-mime-type: "text/markdown;text/x-markdown;"
-      desktop-args: "%F"
+      desktop-file-path: "others/flathub/io.github.mlm_games.renedown.desktop"
       icon-url: "https://raw.githubusercontent.com/mlm-games/renedown/main/others/packaging/icon.svg"
       version: ${{ inputs.version_name }}
       maintainer-name: "MLM Games"
